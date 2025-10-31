@@ -1,0 +1,37 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: my-pool # Tên của "nhóm node"
+  labels:
+    strimzi.io/cluster: my-cluster # QUAN TRỌNG: Liên kết pool này với 'my-cluster'
+spec:
+  replicas: 1 # <-- 'replicas: 1' được chuyển vào đây
+  roles:
+    - broker
+  storage:
+    type: ephemeral # <-- 'storage' được chuyển vào đây
+
+---
+
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: my-cluster
+spec:
+  kafka:
+    version: 4.0.0 # Vẫn giữ phiên bản đúng
+    listeners:
+      # Listener 1: Cổng 9092 (cho nội bộ K8s)
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      # Listener 2: Cổng 9094 (cho chúng ta kết nối từ bên ngoài)
+      - name: external
+        port: 9094
+        type: nodeport
+        tls: false
+  # LƯU Ý: 'replicas' và 'storage' đã bị XÓA khỏi đây
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
