@@ -1,8 +1,7 @@
 # Bỏ qua môi trường ảo Python
 venv/
 
-# Bỏ qua các file .csv (vì chúng quá lớn)
-*.csv
+2019-Oct.csv
 
 # Bỏ qua các file cache của Python
 __pycache__/
