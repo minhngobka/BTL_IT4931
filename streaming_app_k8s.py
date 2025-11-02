@@ -25,7 +25,9 @@ def main():
     spark = SparkSession.builder \
         .appName("CustomerJourneyStreaming") \
         .master("local[*]") \
-        .config("spark.mongodb.output.uri", f"{MONGO_URI}{MONGO_DB_NAME}.{MONGO_COLLECTION_NAME}") \
+        .config("spark.mongodb.write.connection.uri", MONGO_URI)  \
+        .config("spark.mongodb.write.database", MONGO_DB_NAME) \
+        .config("spark.mongodb.write.collection", MONGO_COLLECTION_NAME) \
         .getOrCreate()
 
     # Giảm log của Spark để dễ đọc
@@ -82,10 +84,7 @@ def main():
             batch_df.write \
                 .format("mongodb") \
                 .mode("append") \
-                .option("uri", MONGO_URI) \
-                .option("database", MONGO_DB_NAME) \
-                .option("collection", MONGO_COLLECTION_NAME) \
-                .save()
+                .save() # <-- Xóa các .option() đi, nó sẽ tự lấy config global
             print(f"--- Đã ghi {batch_df.count()} dòng vào MongoDB ---")
         else:
             print("--- Không có dữ liệu mới trong epoch này ---")
