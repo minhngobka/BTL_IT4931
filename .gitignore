@@ -7,3 +7,5 @@ venv/
 # Bỏ qua các file cache của Python
 __pycache__/
 *.pyc
+
+note.txt

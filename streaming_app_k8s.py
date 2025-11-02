@@ -1,38 +1,52 @@
 import os
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json, col, current_timestamp
+# Đảm bảo bạn đã import 'window'
+from pyspark.sql.functions import from_json, col, current_timestamp, window
 from pyspark.sql.types import StructType, StructField, StringType, LongType, DoubleType, TimestampType
 
 # --- Cấu hình ---
 
-# 1. Thông tin Kafka (Lấy từ Giai đoạn 1)
-# Sửa lại IP và Port của bạn
+# 1. Thông tin Kafka
 KAFKA_BOOTSTRAP_SERVER = "my-cluster-kafka-bootstrap.default.svc.cluster.local:9092"
 KAFKA_TOPIC = "customer_events"
 
-# 2. Thông tin MongoDB (Chúng ta sẽ dùng port-forward)
+# 2. Thông tin MongoDB
 MONGO_URI = "mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/"
 MONGO_DB_NAME = "bigdata_db"
-MONGO_COLLECTION_NAME = "customer_events"
-
-# 3. Cấu hình các gói JAR cần thiết
+# Chúng ta sẽ ghi vào một collection mới
+MONGO_COLLECTION_NAME = "event_counts_by_category" 
 
 
 def main():
     print("Khởi tạo Spark Session...")
     
-    # Khởi tạo SparkSession
     spark = SparkSession.builder \
         .appName("CustomerJourneyStreaming") \
         .master("local[*]") \
-        .config("spark.mongodb.write.connection.uri", MONGO_URI)  \
+        .config("spark.mongodb.write.connection.uri", MONGO_URI) \
         .config("spark.mongodb.write.database", MONGO_DB_NAME) \
         .config("spark.mongodb.write.collection", MONGO_COLLECTION_NAME) \
         .getOrCreate()
 
-    # Giảm log của Spark để dễ đọc
     spark.sparkContext.setLogLevel("WARN")
     print("Spark Session đã sẵn sàng.")
+
+    # --- BƯỚC MỚI: ĐỌC DỮ LIỆU STATIC (STATIC DATAFRAME) ---
+    print("Đang đọc dữ liệu catalog sản phẩm từ /opt/spark/work-dir/product_catalog.csv ...")
+    catalog_schema = StructType([
+        StructField("product_id", LongType()),
+        StructField("product_name", StringType()),
+        StructField("category_name", StringType())
+    ])
+    
+    df_product_catalog = spark.read \
+        .schema(catalog_schema) \
+        .option("header", "true") \
+        .csv("/opt/spark/work-dir/product_catalog.csv")
+    
+    # df_product_catalog.show() # Debug
+    print("Đã đọc xong catalog. Bắt đầu đọc luồng Kafka...")
+    # --- KẾT THÚC BƯỚC MỚI ---
 
     # 1. Đọc luồng (Read Stream) từ Kafka
     df_kafka = spark.readStream \
@@ -42,12 +56,9 @@ def main():
         .option("startingOffsets", "latest") \
         .load()
 
-    print("Đã kết nối với Kafka topic. Đang chờ dữ liệu...")
-
     # 2. Định nghĩa Schema (Cấu trúc) cho dữ liệu JSON
-    # Phải khớp với các cột trong file CSV của bạn
     schema = StructType([
-        StructField("event_time", StringType()), # Sẽ convert sau
+        StructField("event_time", StringType()),
         StructField("event_type", StringType()),
         StructField("product_id", LongType()),
         StructField("category_id", LongType()),
@@ -59,48 +70,77 @@ def main():
 
     # 3. Biến đổi (Transformations)
     df_events = df_kafka.select(
-        # Chuyển cột 'value' (dạng binary) thành String, sau đó parse JSON
         from_json(col("value").cast("string"), schema).alias("data")
     ).select("data.*")
 
-    # Xử lý dữ liệu
     df_processed = df_events \
         .withColumn("event_timestamp", col("event_time").cast(TimestampType())) \
-        .withColumn("processing_timestamp", current_timestamp()) \
-        .drop("event_time") # Xóa cột string cũ
+        .drop("event_time")
 
-    # Áp dụng Watermarking (Yêu cầu đề bài)
-    # Xử lý dữ liệu trễ 10 phút
     df_with_watermark = df_processed \
         .withWatermark("event_timestamp", "10 minutes")
 
-    print("Đã định nghĩa schema và transform. Bắt đầu ghi luồng...")
+    # --- BƯỚC MỚI: JOIN LUỒNG VỚI DỮ LIỆU STATIC ---
+    # YÊU CẦU: "Join Operations" (Stream-Static Join)
+    print("Đang join luồng với catalog...")
+    df_enriched_stream = df_with_watermark.join(
+        df_product_catalog,
+        "product_id", # Khóa join
+        "left_outer"  # Kiểu join: giữ tất cả sự kiện, ngay cả khi không tìm thấy sản phẩm
+    )
+    # --- KẾT THÚC BƯỚC MỚI ---
 
-    # 4. Ghi luồng (Write Stream) vào MongoDB
-    # Dùng 'foreachBatch' là cách linh hoạt nhất
-    def write_to_mongo(batch_df, epoch_id):
-        print(f"--- Đang ghi Epoch {epoch_id} ---")
-        if batch_df.count() > 0:
+    # 4. TÍNH TOÁN AGGREGATION TRÊN DỮ LIỆU ĐÃ JOIN
+    # YÊU CẦU: "Complex Aggregations"
+    print("Đang tính toán aggregation trên dữ liệu đã enrich...")
+    df_windowed_counts = df_enriched_stream \
+        .groupBy(
+            window(col("event_timestamp"), "1 minute", "30 seconds").alias("time_window"),
+            col("category_name"), # <-- DÙNG CỘT MỚI TỪ JOIN
+            col("event_type")
+        ) \
+        .count() 
+        # <--- DÒNG ORDER BY ĐÃ BỊ XÓA
+
+    # 5. GHI KẾT QUẢ RA 2 NƠI (SINK) CÙNG LÚC
+
+    # --- SINK 1: GHI RA CONSOLE (ĐỂ DEBUG) ---
+    query_console = df_windowed_counts.writeStream \
+        .outputMode("complete") \
+        .format("console") \
+        .option("truncate", "false") \
+        .trigger(processingTime="30 seconds") \
+        .start()
+
+    # --- SINK 2: GHI VÀO MONGODB ---
+    # Dùng foreachBatch để ghi vào MongoDB
+    
+    def write_agg_to_mongo(batch_df, epoch_id):
+        print(f"--- [Mongo Sink] Đang ghi Epoch {epoch_id} ---")
+        
+        if not batch_df.isEmpty():
             batch_df.write \
                 .format("mongodb") \
                 .mode("append") \
-                .save() # <-- Xóa các .option() đi, nó sẽ tự lấy config global
-            print(f"--- Đã ghi {batch_df.count()} dòng vào MongoDB ---")
+                .save() # Cấu hình .config() ở SparkSession sẽ được dùng
+            print(f"--- [Mongo Sink] Đã ghi vào collection '{MONGO_COLLECTION_NAME}' ---")
         else:
-            print("--- Không có dữ liệu mới trong epoch này ---")
+            print(f"--- [Mongo Sink] Không có dữ liệu mới trong epoch này ---")
 
-    query = df_with_watermark.writeStream \
-        .foreachBatch(write_to_mongo) \
+    query_mongo = df_windowed_counts.writeStream \
         .outputMode("update") \
-        .option("checkpointLocation", "/opt/spark/work-dir/checkpoints") \
-        .trigger(processingTime="15 seconds") \
+        .foreachBatch(write_agg_to_mongo) \
+        .trigger(processingTime="30 seconds") \
+        .option("checkpointLocation", "/opt/spark/work-dir/checkpoints/mongo_agg_sink") \
         .start()
 
-    print("=== Ứng dụng Spark Streaming đang chạy ===")
-    print("=== Dữ liệu từ Kafka sẽ được xử lý và lưu vào MongoDB ===")
-    print("=== Nhấn Ctrl+C để dừng ===")
+
+    print("=== Ứng dụng Spark Streaming đang chạy (Join + Aggregation) ===")
+    print(f"=== Dữ liệu sẽ được in ra console VÀ ghi vào MongoDB (Collection: {MONGO_COLLECTION_NAME}) ===")
     
-    query.awaitTermination()
+    # Đợi 1 query bất kỳ (ví dụ query_console)
+    query_console.awaitTermination()
 
 if __name__ == "__main__":
     main()
+

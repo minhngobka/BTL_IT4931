@@ -30,7 +30,9 @@ RUN wget -P /opt/spark/jars/ https://repo1.maven.org/maven2/org/apache/commons/c
 # -----------------------------------------------------------------
 # BƯỚC 3: Copy script
 # -----------------------------------------------------------------
-RUN echo "Cache bust v7" # <-- THÊM DÒNG NÀY ĐỂ PHÁ VỠ CACHE
+RUN echo "Cache bust v12" 
 COPY streaming_app_k8s.py /opt/spark/work-dir/streaming_app.py
+COPY product_catalog.csv /opt/spark/work-dir/product_catalog.csv
+
 # Trả lại quyền cho user 'spark' (user mặc định)
 USER $SPARK_UID
