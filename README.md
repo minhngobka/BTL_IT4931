@@ -113,6 +113,6 @@ KAFKA_BROKER = '192.168.49.2:31234'
 
 (Đảm bảo bạn vẫn đang trong môi trường `venv`)
 ```bash
-python simulator.py
+python3 simulator.py
 ```
 Bạn sẽ thấy script bắt đầu gửi dữ liệu lên Kafka.
