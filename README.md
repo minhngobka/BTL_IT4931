@@ -117,96 +117,143 @@ python3 simulator.py
 ```
 Bạn sẽ thấy script bắt đầu gửi dữ liệu lên Kafka.
 
-Giai đoạn 3: Xây dựng & Chạy Spark Streaming
-Mở một terminal mới (terminal cũ vẫn đang chạy simulator).
+Giai đoạn 3: Xây dựng Docker Image
+
+Mở một terminal mới (terminal cũ vẫn đang chạy simulator.py).
 
 1. Trỏ Terminal vào Docker của Minikube
-Đây là bước cực kỳ quan trọng. Do chúng ta dùng pullPolicy=Never, image phải được build trực tiếp vào bên trong môi trường Docker của Minikube.
 
-Bash
+Đây là bước cực kỳ quan trọng. Image phải được build trực tiếp vào bên trong môi trường Docker của Minikube.
 
 eval $(minikube docker-env)
-Terminal của bạn bây giờ đã kết nối với Docker daemon của Minikube.
+
 
 2. Build Docker Image
-Build image chứa ứng dụng Spark, các file JAR và script Python. (Chúng ta dùng v1 làm ví dụ).
 
-Bash
+Build image chứa ứng dụng Spark, các file JAR và cả 3 script Python. (Chúng ta dùng v1.0 làm ví dụ).
 
-docker build -t spark-streaming-app:v1 .
-3. Submit Ứng dụng Spark lên Kubernetes
-Chạy lệnh spark-submit để khởi động ứng dụng streaming. Lệnh này sẽ yêu cầu Kubernetes tạo một pod driver mới sử dụng image chúng ta vừa build.
+docker build -t customer-journey-app:v1.0 .
 
-Bash
+
+(Lưu ý: Bạn có thể đặt tên tag bất kỳ, ví dụ v15 như bạn đã làm)
+
+⚡ Giai đoạn 4: Chạy các Job Spark trên Kubernetes
+
+Chúng ta sẽ submit 3 job Spark song song. Job 1 và 2 là job Streaming (chạy liên tục), Job 3 là job Batch (chạy 1 lần rồi kết thúc).
+
+Job 1: (Streaming) Thu thập dữ liệu thô
+
+Job này đọc từ Kafka và lưu dữ liệu thô vào collection customer_events.
 
 spark-submit \
 --master k8s://https://$(minikube ip):8443 \
 --deploy-mode cluster \
---name customer-journey-streaming \
+--name streaming-raw-ingestion \
 --conf spark.kubernetes.authenticate.driver.serviceAccountName=default \
---conf spark.kubernetes.container.image=spark-streaming-app:v1 \
+--conf spark.kubernetes.container.image=customer-journey-app:v1.0 \
 --conf spark.kubernetes.container.image.pullPolicy=Never \
 local:///opt/spark/work-dir/streaming_app.py
+
+
+Job 2: (Streaming) Tổng hợp dữ liệu (Join + Aggregation)
+
+Job này đọc từ Kafka, join với file CSV, và lưu kết quả tổng hợp vào collection event_counts_by_category.
+
+spark-submit \
+--master k8s://https://$(minikube ip):8443 \
+--deploy-mode cluster \
+--name streaming-aggregation \
+--conf spark.kubernetes.authenticate.driver.serviceAccountName=default \
+--conf spark.kubernetes.container.image=customer-journey-app:v1.0 \
+--conf spark.kubernetes.container.image.pullPolicy=Never \
+local:///opt/spark/work-dir/streaming_app_k8s.py
+
+
+Job 3: (Batch) Phân tích Hành trình Khách hàng
+
+Job này đọc toàn bộ dữ liệu từ customer_events (do Job 1 ghi vào), dùng Window Functions để phân tích và lưu kết quả phễu (funnel) vào collection journey_metrics.
+
+spark-submit \
+--master k8s://https://$(minikube ip):8443 \
+--deploy-mode cluster \
+--name customer-journey-batch \
+--conf spark.kubernetes.authenticate.driver.serviceAccountName=default \
+--conf spark.kubernetes.container.image=customer-journey-app:v1.0 \
+--conf spark.kubernetes.container.image.pullPolicy=Never \
+local:///opt/spark/work-dir/journey_analysis.py
+
+
 4. Theo dõi ứng dụng
+
 Mở một terminal thứ ba để theo dõi các pod.
 
-Bash
-
 kubectl get pods -w
-Bạn sẽ thấy pod customer-journey-streaming-...-driver được tạo. Nếu nó chuyển sang trạng thái Running và giữ nguyên trạng thái đó, nghĩa là ứng dụng đã chạy thành công!
+
+
+Bạn sẽ thấy 3 pod driver được tạo:
+
+streaming-raw-ingestion-...-driver: Sẽ ở trạng thái Running.
+
+streaming-aggregation-...-driver: Sẽ ở trạng thái Running.
+
+customer-journey-batch-...-driver: Sẽ chuyển sang Running rồi Completed.
 
 Gỡ lỗi:
 
-Nếu pod bị ErrImageNeverPull: Bạn đã quên chạy eval $(minikube docker-env) trước khi docker build.
+ErrImageNeverPull: Bạn đã quên chạy eval $(minikube docker-env) trước khi docker build.
 
-Nếu pod chuyển sang Error hoặc Completed ngay lập tức: Dùng kubectl logs <tên-pod-driver> để xem lỗi (thường là lỗi Python hoặc lỗi kết nối).
+Error / Completed (ngay lập tức): Dùng kubectl logs <tên-pod-driver> để xem lỗi.
 
-📊 Giai đoạn 4: Kiểm tra Kết quả
-Nếu cả simulator và pod Spark đều đang Running, dữ liệu sẽ được xử lý và lưu vào MongoDB.
+📊 Giai đoạn 5: Kiểm tra Kết quả
 
-Cách 1: Sử dụng Công cụ GUI (như MongoDB Compass)
-Tìm tên pod MongoDB:
+Dữ liệu của bạn bây giờ nằm ở 3 collection khác nhau trong MongoDB.
 
-Bash
+1. Kết nối với MongoDB
 
-kubectl get pods
-(Ví dụ: my-mongo-mongodb-54c5b97b6b-b6kld)
+Dùng MongoDB Compass hoặc Command Line.
 
-Chuyển tiếp (port-forward) cổng 27017 của pod ra máy local:
+# Lấy tên pod MongoDB
+kubectl get pods | grep my-mongo
 
-Bash
+# Port-forward (thay tên pod của bạn)
+kubectl port-forward <my-mongo-mongodb-pod-name> 27017:27017
 
-kubectl port-forward my-mongo-mongodb-54c5b97b6b-b6kld 27017:27017
-Mở MongoDB Compass và kết nối tới mongodb://localhost:27017/.
 
-Bạn sẽ thấy database bigdata_db và collection customer_events chứa đầy dữ liệu.
+Mở Compass kết nối tới mongodb://localhost:27017/ và xem database bigdata_db.
 
-Cách 2: Sử dụng Command Line (mongosh)
-Truy cập shell bên trong pod MongoDB:
+Hoặc dùng kubectl exec:
 
-Bash
+# Truy cập shell (thay tên pod của bạn)
+kubectl exec -it <my-mongo-mongodb-pod-name> -- mongosh
 
-kubectl exec -it my-mongo-mongodb-54c5b97b6b-b6kld -- mongosh
-Bên trong mongosh, chạy các lệnh sau để kiểm tra:
-
-JavaScript
-
-// Chuyển sang database
+# Bên trong mongosh:
 use bigdata_db;
 
-// Đếm số lượng tài liệu
-db.customer_events.countDocuments();
 
-// Xem 5 tài liệu mẫu
+2. Xem các Collection
+
+// 1. Dữ liệu thô (từ Job 1)
 db.customer_events.find().limit(5);
-🛑 Dừng Hệ thống
+
+// 2. Dữ liệu tổng hợp (từ Job 2)
+db.event_counts_by_category.find().limit(5);
+
+// 3. Kết quả phân tích hành trình (từ Job 3)
+db.journey_metrics.find().pretty();
+
+
+🛑 Giai đoạn 6: Dừng Hệ thống
+
 Sau khi hoàn tất, hãy dọn dẹp tài nguyên:
 
-Bash
+# 1. Dừng simulator (Ctrl + C)
 
-# 1. Dừng simulator và spark-submit (Ctrl + C)
-# 2. Xóa pod Spark (nếu nó vẫn chạy)
-kubectl delete pod <tên-pod-driver>
+# 2. Xóa các job Spark (Deployment)
+# (spark-submit tự xóa pod khi deploy-mode=cluster, nhưng ta nên xóa hẳn app)
+# Bạn có thể dùng tên app (spark-app-name) hoặc tên pod driver để xóa
+kubectl delete pod streaming-raw-ingestion-driver
+kubectl delete pod streaming-aggregation-driver
+# (Pod 'customer-journey-batch' đã 'Completed' nên không cần xóa)
 
 # 3. Xóa Kafka
 kubectl delete -f kafka-combined.yaml
