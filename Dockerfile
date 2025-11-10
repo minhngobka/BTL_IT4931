@@ -28,14 +28,18 @@ RUN wget -P /opt/spark/jars/ https://repo1.maven.org/maven2/org/mongodb/bson-rec
 RUN wget -P /opt/spark/jars/ https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.11.1/commons-pool2-2.11.1.jar
 
 # -----------------------------------------------------------------
-# BƯỚC 3: Copy script
+# BƯỚC 3: Copy CẢ BA script và file data
 # -----------------------------------------------------------------
-RUN echo "Cache bust v13" 
-COPY streaming_app_k8s.py /opt/spark/work-dir/streaming_app.py
-COPY product_catalog.csv /opt/spark/work-dir/product_catalog.csv
+# Script 1: Thu thập dữ liệu thô (Raw Ingestion)
+COPY streaming_app.py /opt/spark/work-dir/streaming_app.py
 
-# Copy script phân tích batch mới
+# Script 2: Tổng hợp dữ liệu (Aggregation Stream)
+COPY streaming_app_k8s.py /opt/spark/work-dir/streaming_app_k8s.py
+
+# Script 3: Phân tích hành trình (Batch Analysis)
 COPY journey_analysis.py /opt/spark/work-dir/journey_analysis.py
 
+# File dữ liệu tĩnh
+COPY product_catalog.csv /opt/spark/work-dir/product_catalog.csv
 # Trả lại quyền cho user 'spark' (user mặc định)
 USER $SPARK_UID
