@@ -1,13 +1,55 @@
-# Bỏ qua môi trường ảo Python
+# Python
 venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
 
 # Environment variables
 .env
+config/.env
 
-2019-Oct.csv
+# Data files (large CSV)
+data/raw/*.csv
+*.csv
 
-# Bỏ qua các file cache của Python
-__pycache__/
-*.pyc
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Spark
+spark-warehouse/
+derby.log
+metastore_db/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
 note.txt
+
+# Kubernetes secrets (if any)
+kubernetes/secrets/
+
+# Documentation backup
+docs_backup/

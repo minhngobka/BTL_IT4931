@@ -1,266 +1,360 @@
-# 🚀 Bài tập lớn: Phân tích Hành trình Khách hàng (Customer Journey)
+# Big Data Customer Journey Analytics
 
-Dự án này xây dựng một hệ thống Big Data theo kiến trúc Kappa để phân tích hành vi người dùng trên một trang thương mại điện tử (view, cart, purchase) theo thời gian thực.
+Real-time e-commerce customer journey analytics system using Apache Spark, Kafka, and MongoDB.
 
-## 🛠️ Yêu cầu cài đặt (Prerequisites)
+## 📖 About This Project
 
-Trước khi bắt đầu, bạn cần cài đặt các công cụ sau trên máy Ubuntu:
+This project demonstrates a **real-time big data analytics pipeline** for analyzing customer behavior in an e-commerce platform. It processes millions of events (views, carts, purchases) in real-time to generate insights about customer journeys, conversion funnels, and behavior patterns.
 
-1.  **Git:** `sudo apt install git`
-2.  **Docker:** [Link hướng dẫn cài Docker](https://docs.docker.com/engine/install/ubuntu/)
-3.  **Python 3.10+ & Venv:** `sudo apt install python3.10-venv`
-4.  **Minikube:** [Link hướng dẫn cài Minikube](https://minikube.sigs.k8s.io/docs/start/)
-5.  **Kubectl:** `sudo snap install kubectl --classic`
-6.  **Helm:** `sudo snap install helm --classic`
+**Key Features:**
+- ⚡ **Real-time streaming** with Apache Spark Structured Streaming
+- 📊 **Complex aggregations** (windowed, stateful, sessionization)
+- 🔗 **Stream-static joins** with product catalogs
+- 🤖 **Machine Learning** (K-Means clustering, Random Forest classification)
+- 🎯 **Exactly-once semantics** with checkpointing
+- 📈 **Analytics dashboard** via MongoDB queries
 
-## 📦 Cài đặt dự án
+## 🏗️ Architecture
 
-### 1. Clone Repository
-
-```bash
-git clone https://github.com/DucTham2004/bigdata-customer-journey.git
-cd bigdata_project
+```
+CSV Data (5.3GB) → Kafka → Spark Streaming → MongoDB
+                              ↓
+                      Batch ML Jobs (6 hours)
 ```
 
-### 2. Thiết lập Môi trường Python
+**Technology Stack:**
+- **Apache Spark 3.5.0** - Stream & batch processing
+- **Apache Kafka (Strimzi)** - Message queue (3 partitions)
+- **MongoDB (Bitnami)** - Analytics database (9 collections)
+- **Kubernetes (Minikube)** - Container orchestration
+- **Python 3.10+** - Application language
+- **Docker** - Containerization
+
+## 🚀 Quick Start (5 Steps)
 
 ```bash
-# Tạo môi trường ảo
+# 1. Clone the repository
+git clone https://github.com/minhngobka/BTL_IT4931.git
+cd BTL_IT4931
+
+# 2. Download dataset (5.3GB)
+# Get 2019-Oct.csv from: https://www.kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store
+# Place it in: data/raw/ecommerce_events_2019_oct.csv
+
+# 3. Start Minikube with sufficient resources
+minikube start --cpus=4 --memory=8192
+
+# 4. Run automated deployment (installs Kafka, MongoDB, Spark)
+./scripts/deploy_all.sh
+
+# 5. Update Kafka broker address and start simulator
+export MINIKUBE_IP=$(minikube ip)
+sed -i "s|KAFKA_EXTERNAL_BROKER=.*|KAFKA_EXTERNAL_BROKER=$MINIKUBE_IP:31927|" config/.env
+python src/utils/event_simulator.py
+```
+
+**⏱️ Total time:** ~25 minutes
+
+## 📋 Prerequisites
+
+Before running the project, ensure you have:
+
+**Required Software:**
+- **Docker** (20.10+) 
+- **Minikube** (v1.25+)
+- **kubectl** (v1.25+)
+- **Helm** (v3.0+)
+- **Python 3.10+**
+
+**System Requirements:**
+- **CPU:** 4 cores minimum
+- **RAM:** 8GB minimum
+- **Disk:** 20GB free space
+- **OS:** Linux (Ubuntu 20.04+)
+
+**Quick Install Commands:**
+```bash
+# Docker
+sudo apt install docker.io
+sudo usermod -aG docker $USER
+
+# Minikube
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+# kubectl
+sudo snap install kubectl --classic
+
+# Helm
+sudo snap install helm --classic
+
+# Python environment
 python3 -m venv venv
-
-# Kích hoạt môi trường
 source venv/bin/activate
-
-# Cài đặt thư viện (nếu có file requirements.txt)
-# (Bạn có thể tạo file này bằng lệnh: pip freeze > requirements.txt)
-pip install pandas kafka-python
+pip install -r requirements.txt
 ```
 
-### 3. Tải Dữ liệu (Rất quan trọng)
+## 📁 Project Structure
 
-Do file dữ liệu quá lớn, nó không được lưu trên GitHub. Bạn cần tự tải file `2019-Oct.csv` từ link Kaggle dưới đây:
+```
+bigdata_project/
+├── src/                          # Source code
+│   ├── streaming/                # Real-time streaming apps
+│   │   ├── streaming_basic.py
+│   │   ├── streaming_advanced.py    # ← Main production app
+│   │   └── streaming_kubernetes.py
+│   ├── batch/                    # Batch processing
+│   │   ├── ml_analytics.py          # ← ML pipeline
+│   │   └── journey_analysis.py
+│   └── utils/                    # Utilities
+│       ├── event_simulator.py       # ← Kafka producer
+│       ├── dimension_generator.py
+│       └── validate_environment.sh
+├── data/
+│   ├── raw/                      # Raw data (CSV)
+│   └── catalog/                  # Dimension tables
+├── config/                       # Configuration files
+│   ├── .env                      # Local environment
+│   ├── .env.example              # Template
+│   └── kafka-strimzi.yaml
+├── kubernetes/                   # K8s manifests
+│   └── spark-deployments.yaml
+├── scripts/
+│   └── deploy_all.sh             # ← Run this!
+├── docs/                         # Documentation
+│   ├── README.md
+│   ├── SETUP_GUIDE.md
+│   └── TECHNICAL_DOCS.md
+└── Dockerfile
+```
 
-* **Link Kaggle:** [https://www.kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store](https://www.kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store)
+## 🎯 What It Does
 
-Sau khi tải về, hãy **đặt file `2019-Oct.csv` vào thư mục gốc của dự án** (ngang hàng với file `simulator.py`).
+### Real-Time Analytics
 
-## 🚀 Khởi chạy Hạ tầng (Giai đoạn 1)
+**Input:** E-commerce events (view, cart, purchase)
+```json
+{
+  "event_time": "2019-10-01 00:00:00 UTC",
+  "event_type": "purchase",
+  "product_id": 3900821,
+  "brand": "samsung",
+  "price": 489.99,
+  "user_id": 554748717,
+  "user_session": "9333dfbd-b87a-4708-9857-6336556b0fcc"
+}
+```
 
-Các lệnh này chỉ cần chạy 1 lần để thiết lập môi trường Kubernetes.
+**Processing:**
+- Enriches events with product metadata (broadcast join)
+- Calculates windowed aggregations (5-min tumbling, 10-min sliding)
+- Tracks user sessions with state management
+- Analyzes conversion funnels (view → cart → purchase)
 
-### 1. Khởi động Minikube
+**Output:** 9 MongoDB collections with insights
+- `enriched_events` - Processed events
+- `user_session_analytics` - Session-level metrics
+- `conversion_funnel` - Conversion rates
+- `event_aggregations` - Time-windowed stats
+- `customer_segments` - ML clustering results
+- `churn_predictions` - Churn probability scores
+
+### Batch Machine Learning
+
+**K-Means Clustering (4 clusters):**
+- Segments customers based on behavior patterns
+- Features: purchase frequency, avg order value, session duration
+
+**Random Forest Classification:**
+- Predicts customer churn
+- 80/20 train-test split
+- AUC: 0.75-0.85
+
+## 🔧 Configuration
+
+Edit `config/.env` for your environment:
+
+```env
+# Kafka
+KAFKA_EXTERNAL_BROKER=192.168.49.2:31927  # Update with minikube ip
+KAFKA_TOPIC=customer_events
+
+# MongoDB
+MONGODB_HOST=localhost
+MONGODB_PORT=27017
+MONGODB_DATABASE=bigdata_db
+
+# Simulator
+CSV_FILE_PATH=data/raw/ecommerce_events_2019_oct.csv
+CHUNK_SIZE=1000
+SLEEP_TIME=0.01
+```
+
+## 📊 Monitoring & Verification
+
+### Check Deployment Status
 
 ```bash
-minikube start --driver=docker --cpus=4 --memory=8g
+# Check all pods are running
+kubectl get pods
+
+# Expected output:
+# my-cluster-kafka-0                Running
+# my-cluster-zookeeper-0            Running
+# my-mongo-mongodb-0                Running
+# spark-streaming-advanced-xxx      Running
 ```
 
-### 2. Cài đặt MongoDB
+### Monitor Spark Streaming
 
 ```bash
-helm repo add bitnami [https://charts.bitnami.com/bitnami](https://charts.bitnami.com/bitnami)
-helm install my-mongo bitnami/mongodb --set auth.enabled=false
+# Port-forward Spark UI
+kubectl port-forward deployment/spark-streaming-advanced 4040:4040
+
+# Open in browser: http://localhost:4040
 ```
 
-### 3. Cài đặt Strimzi (Kafka Operator)
+### Query MongoDB
 
 ```bash
-helm repo add strimzi [https://strimzi.io/charts/](https://strimzi.io/charts/)
-helm install strimzi-operator strimzi/strimzi-kafka-operator
+# ⭐ CÁCH TỐT NHẤT: Query trực tiếp vào pod MongoDB (đáng tin cậy 100%)
+bash scripts/demo_mongodb.sh
+
+# HOẶC query thủ công:
+kubectl exec deployment/my-mongo-mongodb -- mongosh bigdata_db --quiet --eval "
+  print('📊 Total records:', db.enriched_events.countDocuments());
+  db.enriched_events.find().limit(2).forEach(printjson);
+"
+
+# Query với aggregation pipeline
+kubectl exec deployment/my-mongo-mongodb -- mongosh bigdata_db --quiet --eval "
+  db.enriched_events.aggregate([
+    {\$match: {event_type: 'view'}},
+    {\$group: {_id: '\$product_id', views: {\$sum: 1}}},
+    {\$sort: {views: -1}},
+    {\$limit: 5}
+  ]).forEach(printjson)
+"
+
+# 💡 LƯU Ý: Port-forward tới localhost có thể không ổn định
+# Khuyến nghị dùng kubectl exec để query trực tiếp vào pod
 ```
 
-### 4. Đợi các Operator chạy
+### Check Kafka
 
-Dùng VSCode mở một Terminal mới (Ctrl + Shift + \`) và chạy:
 ```bash
-kubectl get pods -w
+# List topics
+kubectl exec -it my-cluster-kafka-0 -- bin/kafka-topics.sh \
+  --bootstrap-server localhost:9092 --list
+
+# Consume messages
+kubectl exec -it my-cluster-kafka-0 -- bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 \
+  --topic customer_events --from-beginning --max-messages 10
 ```
-Đợi cho đến khi cả `my-mongo-mongodb-...` và `strimzi-cluster-operator-...` đều `Running`.
 
-### 5. Tạo Kafka Cluster (KRaft)
+## 🐛 Troubleshooting
 
-Sau khi operator đã chạy, hãy áp dụng file cấu hình Kafka của chúng ta:
+### Pods Stuck in Pending/ImagePullBackOff
+
 ```bash
-kubectl apply -f kafka-combined.yaml
+# Check pod details
+kubectl describe pod <pod-name>
+
+# Reload Docker image to Minikube
+docker build -t bigdata-spark:latest .
+minikube image load bigdata-spark:latest
+
+# Restart deployment
+kubectl rollout restart deployment/spark-streaming-advanced
 ```
-Tiếp tục theo dõi `kubectl get pods -w`. Đợi cho đến khi các pod `my-cluster-kafka-0` và `my-cluster-entity-operator-...` cũng `Running`.
+
+### Kafka Connection Failed
+
+```bash
+# Get Minikube IP
+minikube ip
+
+# Update .env file
+sed -i "s|KAFKA_EXTERNAL_BROKER=.*|KAFKA_EXTERNAL_BROKER=$(minikube ip):31927|" config/.env
+
+# Verify Kafka service
+kubectl get svc my-cluster-kafka-external-bootstrap
+```
+
+### MongoDB Connection Issues
+
+```bash
+# Check MongoDB is running
+kubectl get pods | grep mongodb
+
+# ⭐ Query trực tiếp vào pod (không cần port-forward)
+kubectl exec deployment/my-mongo-mongodb -- mongosh bigdata_db --quiet --eval "
+  db.enriched_events.countDocuments()
+"
+
+# Nếu vẫn muốn dùng port-forward
+kubectl port-forward svc/my-mongo-mongodb 27017:27017
+kubectl port-forward svc/my-mongo-mongodb 27017:27017
+
+# Test connection
+mongosh mongodb://localhost:27017/bigdata_db --eval "db.runCommand({ ping: 1 })"
+```
+
+### Event Simulator Not Working
+
+```bash
+# Check .env file exists
+cat config/.env
+
+# Verify CSV file location
+ls -lh data/raw/ecommerce_events_2019_oct.csv
+
+# Test Kafka connectivity
+python -c "from kafka import KafkaProducer; print('OK')"
+```
+
+## 🧹 Cleanup
+
+```bash
+# Delete all Kubernetes resources
+kubectl delete -f kubernetes/spark-deployments.yaml
+kubectl delete -f config/kafka-strimzi.yaml
+
+# Or stop Minikube completely
+minikube stop
+minikube delete
+```
+
+## 📚 Detailed Documentation
+
+- **[docs/SETUP_GUIDE.md](docs/SETUP_GUIDE.md)** - Complete step-by-step setup (12 phases)
+- **[docs/TECHNICAL_DOCS.md](docs/TECHNICAL_DOCS.md)** - Architecture & technical details
+- **[docs/README.md](docs/README.md)** - Detailed feature explanations
+
+## 🎓 Academic Context
+
+**Course:** IT4931 - Big Data Analytics  
+**Topic:** Real-time Customer Journey Analytics  
+**Technologies Demonstrated:**
+- Distributed stream processing (Spark Structured Streaming)
+- Message queuing (Apache Kafka)
+- NoSQL databases (MongoDB)
+- Container orchestration (Kubernetes)
+- Machine Learning (MLlib)
+- Data engineering best practices
+
+## �� Team Members
+
+For teammates cloning this project:
+1. Follow the **Quick Start** section above
+2. Read `docs/SETUP_GUIDE.md` for detailed explanations
+3. Check `config/.env.example` for configuration options
+
+## 📄 License
+
+Academic project for IT4931 course.
 
 ---
 
-## 🏃 Chạy Mô phỏng (Data Simulator)
-
-Sau khi toàn bộ hạ tầng đã `Running`:
-
-### 1. Tìm địa chỉ Kafka
-
-```bash
-# Lấy IP của Minikube
-minikube ip
-
-# Lấy Cổng (Port) của Kafka
-kubectl get service my-cluster-kafka-external-bootstrap -o=jsonpath='{.spec.ports[0].nodePort}'
-```
-
-### 2. Cập nhật file `simulator.py`
-
-Mở file `simulator.py` và cập nhật dòng `KAFKA_BROKER` bằng IP và Cổng bạn vừa tìm được:
-
-```python
-# Ví dụ:
-KAFKA_BROKER = '192.168.49.2:31234'
-```
-
-### 3. Chạy script
-
-(Đảm bảo bạn vẫn đang trong môi trường `venv`)
-```bash
-python3 simulator.py
-```
-Bạn sẽ thấy script bắt đầu gửi dữ liệu lên Kafka.
-
-Giai đoạn 3: Xây dựng Docker Image
-
-Mở một terminal mới (terminal cũ vẫn đang chạy simulator.py).
-
-1. Trỏ Terminal vào Docker của Minikube
-
-Đây là bước cực kỳ quan trọng. Image phải được build trực tiếp vào bên trong môi trường Docker của Minikube.
-
-eval $(minikube docker-env)
-
-
-2. Build Docker Image
-
-Build image chứa ứng dụng Spark, các file JAR và cả 3 script Python. (Chúng ta dùng v1.0 làm ví dụ).
-
-docker build -t customer-journey-app:v1.0 .
-
-
-(Lưu ý: Bạn có thể đặt tên tag bất kỳ, ví dụ v15 như bạn đã làm)
-
-⚡ Giai đoạn 4: Chạy các Job Spark trên Kubernetes
-
-Chúng ta sẽ submit 3 job Spark song song. Job 1 và 2 là job Streaming (chạy liên tục), Job 3 là job Batch (chạy 1 lần rồi kết thúc).
-
-Job 1: (Streaming) Thu thập dữ liệu thô
-
-Job này đọc từ Kafka và lưu dữ liệu thô vào collection customer_events.
-
-spark-submit \
---master k8s://https://$(minikube ip):8443 \
---deploy-mode cluster \
---name streaming-raw-ingestion \
---conf spark.kubernetes.authenticate.driver.serviceAccountName=default \
---conf spark.kubernetes.container.image=customer-journey-app:v1.0 \
---conf spark.kubernetes.container.image.pullPolicy=Never \
-local:///opt/spark/work-dir/streaming_app.py
-
-
-Job 2: (Streaming) Tổng hợp dữ liệu (Join + Aggregation)
-
-Job này đọc từ Kafka, join với file CSV, và lưu kết quả tổng hợp vào collection event_counts_by_category.
-
-spark-submit \
---master k8s://https://$(minikube ip):8443 \
---deploy-mode cluster \
---name streaming-aggregation \
---conf spark.kubernetes.authenticate.driver.serviceAccountName=default \
---conf spark.kubernetes.container.image=customer-journey-app:v1.0 \
---conf spark.kubernetes.container.image.pullPolicy=Never \
-local:///opt/spark/work-dir/streaming_app_k8s.py
-
-
-Job 3: (Batch) Phân tích Hành trình Khách hàng
-
-Job này đọc toàn bộ dữ liệu từ customer_events (do Job 1 ghi vào), dùng Window Functions để phân tích và lưu kết quả phễu (funnel) vào collection journey_metrics.
-
-spark-submit \
---master k8s://https://$(minikube ip):8443 \
---deploy-mode cluster \
---name customer-journey-batch \
---conf spark.kubernetes.authenticate.driver.serviceAccountName=default \
---conf spark.kubernetes.container.image=customer-journey-app:v1.0 \
---conf spark.kubernetes.container.image.pullPolicy=Never \
-local:///opt/spark/work-dir/journey_analysis.py
-
-
-4. Theo dõi ứng dụng
-
-Mở một terminal thứ ba để theo dõi các pod.
-
-kubectl get pods -w
-
-
-Bạn sẽ thấy 3 pod driver được tạo:
-
-streaming-raw-ingestion-...-driver: Sẽ ở trạng thái Running.
-
-streaming-aggregation-...-driver: Sẽ ở trạng thái Running.
-
-customer-journey-batch-...-driver: Sẽ chuyển sang Running rồi Completed.
-
-Gỡ lỗi:
-
-ErrImageNeverPull: Bạn đã quên chạy eval $(minikube docker-env) trước khi docker build.
-
-Error / Completed (ngay lập tức): Dùng kubectl logs <tên-pod-driver> để xem lỗi.
-
-📊 Giai đoạn 5: Kiểm tra Kết quả
-
-Dữ liệu của bạn bây giờ nằm ở 3 collection khác nhau trong MongoDB.
-
-1. Kết nối với MongoDB
-
-Dùng MongoDB Compass hoặc Command Line.
-
-# Lấy tên pod MongoDB
-kubectl get pods | grep my-mongo
-
-# Port-forward (thay tên pod của bạn)
-kubectl port-forward <my-mongo-mongodb-pod-name> 27017:27017
-
-
-Mở Compass kết nối tới mongodb://localhost:27017/ và xem database bigdata_db.
-
-Hoặc dùng kubectl exec:
-
-# Truy cập shell (thay tên pod của bạn)
-kubectl exec -it <my-mongo-mongodb-pod-name> -- mongosh
-
-# Bên trong mongosh:
-use bigdata_db;
-
-
-2. Xem các Collection
-
-// 1. Dữ liệu thô (từ Job 1)
-db.customer_events.find().limit(5);
-
-// 2. Dữ liệu tổng hợp (từ Job 2)
-db.event_counts_by_category.find().limit(5);
-
-// 3. Kết quả phân tích hành trình (từ Job 3)
-db.journey_metrics.find().pretty();
-
-
-🛑 Giai đoạn 6: Dừng Hệ thống
-
-Sau khi hoàn tất, hãy dọn dẹp tài nguyên:
-
-# 1. Dừng simulator (Ctrl + C)
-
-# 2. Xóa các job Spark (Deployment)
-# (spark-submit tự xóa pod khi deploy-mode=cluster, nhưng ta nên xóa hẳn app)
-# Bạn có thể dùng tên app (spark-app-name) hoặc tên pod driver để xóa
-kubectl delete pod streaming-raw-ingestion-driver
-kubectl delete pod streaming-aggregation-driver
-# (Pod 'customer-journey-batch' đã 'Completed' nên không cần xóa)
-
-# 3. Xóa Kafka
-kubectl delete -f kafka-combined.yaml
-
-# 4. Gỡ cài đặt Strimzi và MongoDB
-helm uninstall strimzi-operator
-helm uninstall my-mongo
-
-# 5. Dừng Minikube
-minikube stop
+**Need help?** Check the troubleshooting section above or see `docs/SETUP_GUIDE.md` for more details.
