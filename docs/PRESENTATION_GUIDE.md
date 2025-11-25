@@ -485,7 +485,7 @@ kubectl scale deployment spark-streaming-advanced --replicas=1
 > 4. **Real-time dashboard:** Grafana + Prometheus để visualize metrics
 > 5. **CDC (Change Data Capture):** Sync với operational databases
 > 6. **Lambda architecture:** Combine streaming và batch với Delta Lake
-> 7. **Multi-tenant:** Support nhiều e-commerce sites trên cùng platform"
+> 7. **Multi-tenant:** Support nhiều e-commerce sites trên cùng platforms"
 
 ### **8. "Code quality như thế nào?"**
 
