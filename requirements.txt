@@ -1,0 +1,22 @@
+# Python Dependencies for Big Data Customer Journey Project
+# =========================================================
+
+# Core Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Kafka Integration
+kafka-python>=2.0.2
+
+# Machine Learning (used with PySpark MLlib)
+scikit-learn>=1.3.0
+
+# Data Visualization (for local analysis)
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Performance and Data Handling
+pyarrow>=12.0.0
+
+# Note: PySpark is included in the Apache Spark Docker image
+# If running locally, install with: pip install pyspark==3.5.0
