@@ -1,6 +1,9 @@
 # Bỏ qua môi trường ảo Python
 venv/
 
+# Environment variables
+.env
+
 2019-Oct.csv
 
 # Bỏ qua các file cache của Python

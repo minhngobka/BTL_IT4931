@@ -1,20 +1,20 @@
 import pandas as pd
 import json
 import time
+import os
 from kafka import KafkaProducer
 from kafka.errors import NoBrokersAvailable
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # --- Cấu hình ---
-KAFKA_TOPIC = 'customer_events'
-
-# !!! QUAN TRỌNG: Sửa dòng này !!!
-# Hãy chạy 'minikube ip' và 'kubectl get service ...' để lấy IP và Port
-# KAFKA_BROKER = 'localhost:9092' # Đây là giá trị cũ
-KAFKA_BROKER = '192.168.49.2:31927' # Ví dụ: '192.168.49.2:31234'
-
-CSV_FILE_PATH = '2019-Oct.csv' # Đảm bảo file này cùng thư mục
-CHUNK_SIZE = 1000 # Số dòng đọc từ CSV mỗi lần (để mô phỏng cho nhanh)
-SLEEP_TIME = 0.01 # Thời gian nghỉ giữa mỗi lần gửi (giây)
+KAFKA_BROKER = os.getenv('KAFKA_EXTERNAL_BROKER', '192.168.49.2:31927')
+KAFKA_TOPIC = os.getenv('KAFKA_TOPIC', 'customer_events')
+CSV_FILE_PATH = os.getenv('CSV_FILE_PATH', '2019-Oct.csv')
+CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', '1000'))
+SLEEP_TIME = float(os.getenv('SLEEP_TIME', '0.01'))
 
 def create_kafka_producer(broker_url):
     """Tạo Kafka Producer, thử kết nối lại nếu thất bại."""
