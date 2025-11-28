@@ -1,18 +1,23 @@
 import os
+from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 # Đảm bảo bạn đã import 'window'
 from pyspark.sql.functions import from_json, col, current_timestamp, window
 from pyspark.sql.types import StructType, StructField, StringType, LongType, DoubleType, TimestampType
 
+# Load environment variables from config/.env
+env_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config', '.env')
+load_dotenv(dotenv_path=env_path)
+
 # --- Cấu hình ---
 
-# 1. Thông tin Kafka
-KAFKA_BOOTSTRAP_SERVER = "my-cluster-kafka-bootstrap.default.svc.cluster.local:9092"
-KAFKA_TOPIC = "customer_events"
+# 1. Thông tin Kafka (Đọc từ .env hoặc mặc định)
+KAFKA_BOOTSTRAP_SERVER = os.getenv('KAFKA_INTERNAL_BROKER', 'my-cluster-kafka-bootstrap.default.svc.cluster.local:9092')
+KAFKA_TOPIC = os.getenv('KAFKA_TOPIC', 'customer_events')
 
-# 2. Thông tin MongoDB
-MONGO_URI = "mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/"
-MONGO_DB_NAME = "bigdata_db"
+# 2. Thông tin MongoDB (Đọc từ .env hoặc mặc định)
+MONGO_URI = os.getenv('MONGODB_URI', 'mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/')
+MONGO_DB_NAME = os.getenv('MONGODB_DATABASE', 'bigdata_db')
 # Chúng ta sẽ ghi vào một collection mới
 MONGO_COLLECTION_NAME = "event_counts_by_category" 
 

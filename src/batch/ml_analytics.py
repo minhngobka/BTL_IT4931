@@ -6,10 +6,10 @@ This batch job demonstrates:
 - Time series analysis
 - Statistical computations
 - Performance optimization (bucketing, caching, partition pruning)
-- GraphFrames for network analysis
 """
 
 import os
+from dotenv import load_dotenv
 from pyspark.sql import SparkSession, Window
 from pyspark.sql.functions import (
     col, count, sum, avg, max, min, stddev, variance, corr, coalesce,
@@ -35,9 +35,13 @@ from pyspark.ml.evaluation import (
 from pyspark.ml import Pipeline
 from pyspark.ml.stat import Correlation, ChiSquareTest
 
+# Load environment variables from config/.env
+env_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config', '.env')
+load_dotenv(dotenv_path=env_path)
+
 # Configuration
-MONGO_URI = "mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/"
-MONGO_DB_NAME = "bigdata_db"
+MONGO_URI = os.getenv('MONGODB_URI', 'mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/')
+MONGO_DB_NAME = os.getenv('MONGODB_DATABASE', 'bigdata_db')
 MONGO_COLLECTION_EVENTS = "enriched_events"
 MONGO_COLLECTION_SESSIONS = "user_session_analytics"
 

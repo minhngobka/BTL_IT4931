@@ -47,10 +47,10 @@ else
     exit 1
 fi
 
-# Check if in correct directory
-if [ ! -f "simulator.py" ]; then
+# Check if in correct directory (look for key files in BTL_IT4931)
+if [ ! -f "requirements.txt" ] || [ ! -d "src" ]; then
     echo -e "${RED}✗${NC} Not in correct directory!"
-    echo "Please run this script from /home/tham/bigdata_project"
+    echo "Please run this script from the project root (BTL_IT4931)"
     exit 1
 fi
 
@@ -349,10 +349,10 @@ echo "  Port: ${GREEN}$KAFKA_PORT${NC}"
 echo "  Full address: ${GREEN}$MINIKUBE_IP:$KAFKA_PORT${NC}"
 
 echo ""
-echo -e "${YELLOW}IMPORTANT:${NC} You need to update simulator.py with this Kafka address"
+echo -e "${YELLOW}IMPORTANT:${NC} You need to update config/.env with this Kafka address"
 echo ""
-echo "Edit simulator.py and change line 11 to:"
-echo -e "${GREEN}KAFKA_BROKER = '$MINIKUBE_IP:$KAFKA_PORT'${NC}"
+echo "Edit config/.env and set KAFKA_EXTERNAL_BROKER to:"
+echo -e "${GREEN}KAFKA_EXTERNAL_BROKER=$MINIKUBE_IP:$KAFKA_PORT${NC}"
 echo ""
 
 wait_for_user
@@ -394,11 +394,11 @@ echo -e "${BLUE}=========================================="
 echo "Setup Complete! Next Steps:"
 echo -e "==========================================${NC}"
 echo ""
-echo "1. ${YELLOW}Update simulator.py${NC} with Kafka address:"
-echo "   Kafka address: ${GREEN}$MINIKUBE_IP:$KAFKA_PORT${NC}"
+echo "1. ${YELLOW}Update config/.env${NC} with Kafka address:"
+echo "   KAFKA_EXTERNAL_BROKER=${GREEN}$MINIKUBE_IP:$KAFKA_PORT${NC}"
 echo ""
 echo "2. ${YELLOW}Run the simulator${NC} (in this same terminal):"
-echo "   ${GREEN}python simulator.py${NC}"
+echo "   ${GREEN}python src/utils/event_simulator.py${NC}"
 echo ""
 echo "3. ${YELLOW}Monitor streaming logs${NC} (open new terminal):"
 echo "   ${GREEN}kubectl logs -f deployment/spark-streaming-advanced${NC}"

@@ -1,20 +1,25 @@
 # Tên file: journey_analysis.py
 import os
+from dotenv import load_dotenv
 from pyspark.sql import SparkSession, Window
 from pyspark.sql.functions import col, max, when, sum, count, lit, avg, coalesce
 from pyspark.sql.types import DoubleType
 from datetime import datetime
 
+# Load environment variables from config/.env
+env_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config', '.env')
+load_dotenv(dotenv_path=env_path)
+
 # --- Cấu hình ---
 
 # 1. Thông tin MongoDB (Đọc từ collection của app streaming)
-MONGO_URI_READ = "mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/"
-MONGO_DB_NAME_READ = "bigdata_db"
+MONGO_URI_READ = os.getenv('MONGODB_URI', 'mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/')
+MONGO_DB_NAME_READ = os.getenv('MONGODB_DATABASE', 'bigdata_db')
 MONGO_COLLECTION_READ = "customer_events" # <-- Collection mà streaming_app.py ghi vào
 
 # 2. Thông tin MongoDB (Ghi ra collection kết quả)
-MONGO_URI_WRITE = "mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/"
-MONGO_DB_NAME_WRITE = "bigdata_db"
+MONGO_URI_WRITE = os.getenv('MONGODB_URI', 'mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/')
+MONGO_DB_NAME_WRITE = os.getenv('MONGODB_DATABASE', 'bigdata_db')
 MONGO_COLLECTION_WRITE = "journey_metrics" # <-- Collection mới cho kết quả
 
 def main():

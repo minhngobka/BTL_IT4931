@@ -34,8 +34,8 @@ RUN wget -P /opt/spark/jars/ https://repo1.maven.org/maven2/org/mongodb/bson-rec
 # Gói phụ thuộc chung
 RUN wget -P /opt/spark/jars/ https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.11.1/commons-pool2-2.11.1.jar
 
-# GraphFrames for graph processing (optional but recommended)
-RUN wget -P /opt/spark/jars/ https://repos.spark-packages.org/graphframes/graphframes/0.8.2-spark3.2-s_2.12/graphframes-0.8.2-spark3.2-s_2.12.jar
+# NOTE: GraphFrames (0.8.2) is built for Spark 3.2 and incompatible with 3.5.0
+# If needed, update to graphframes>=0.8.3 that supports Spark 3.5.0
 
 # -----------------------------------------------------------------
 # BƯỚC 3: Copy application code and data files
