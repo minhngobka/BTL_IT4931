@@ -70,7 +70,7 @@ def generate_user_dimension(num_users=10000, csv_file_path='2019-Oct.csv'):
         })
     
     df_users = pd.DataFrame(users)
-    output_file = 'user_dimension.csv'
+    output_file = 'data/catalog/user_dimension.csv'
     df_users.to_csv(output_file, index=False)
     print(f"✓ User dimension saved to {output_file}")
     print(f"  Rows: {len(df_users)}")
@@ -154,7 +154,7 @@ def generate_enhanced_product_catalog(csv_file_path='2019-Oct.csv'):
         
         df_products = df_products[output_columns]
         
-        output_file = 'product_catalog.csv'
+        output_file = 'data/catalog/product_catalog.csv'
         df_products.to_csv(output_file, index=False)
         print(f"✓ Product catalog saved to {output_file}")
         print(f"  Rows: {len(df_products)}")
@@ -180,7 +180,7 @@ def generate_enhanced_product_catalog(csv_file_path='2019-Oct.csv'):
             })
         
         df_products = pd.DataFrame(products)
-        df_products.to_csv('product_catalog.csv', index=False)
+        df_products.to_csv('data/catalog/product_catalog.csv', index=False)
         print(f"✓ Minimal product catalog created")
         return df_products
 
@@ -230,7 +230,7 @@ def generate_category_hierarchy():
     ]
     
     df_categories = pd.DataFrame(categories)
-    output_file = 'category_hierarchy.csv'
+    output_file = 'data/catalog/category_hierarchy.csv'
     df_categories.to_csv(output_file, index=False)
     print(f"✓ Category hierarchy saved to {output_file}")
     print(f"  Rows: {len(df_categories)}")
