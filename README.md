@@ -1,36 +1,99 @@
 # Big Data Customer Journey Analytics
 
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Apache Spark 3.5.0](https://img.shields.io/badge/spark-3.5.0-orange.svg)](https://spark.apache.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Real-time e-commerce customer journey analytics system using Apache Spark, Kafka, and MongoDB.
 
-## 📖 About This Project
+## 📖 Overview
 
-This project demonstrates a **real-time big data analytics pipeline** for analyzing customer behavior in an e-commerce platform. It processes millions of events (views, carts, purchases) in real-time to generate insights about customer journeys, conversion funnels, and behavior patterns.
+This project demonstrates a **production-ready big data analytics pipeline** for analyzing customer behavior in real-time. It processes millions of e-commerce events (views, carts, purchases) to generate insights about customer journeys, conversion funnels, and behavior patterns.
 
 **Key Features:**
-- ⚡ **Real-time streaming** with Apache Spark Structured Streaming
-- 📊 **Complex aggregations** (windowed, stateful, sessionization)
-- 🔗 **Stream-static joins** with product catalogs
-- 🤖 **Machine Learning** (K-Means clustering, Random Forest classification)
-- 🎯 **Exactly-once semantics** with checkpointing
-- 📈 **Analytics dashboard** via MongoDB queries
+- ⚡ Real-time streaming with Spark Structured Streaming
+- 📊 Complex windowed aggregations and stateful processing
+- 🔗 Stream-static joins with dimension tables
+- 🤖 Machine Learning (K-Means clustering, Random Forest)
+- 🎯 Exactly-once semantics with checkpointing
+- 📈 Analytics results in MongoDB
 
 ## 🏗️ Architecture
 
 ```
 CSV Data (5.3GB) → Kafka → Spark Streaming → MongoDB
                               ↓
-                      Batch ML Jobs (6 hours)
+                      Batch ML Jobs
 ```
 
 **Technology Stack:**
 - **Apache Spark 3.5.0** - Stream & batch processing
-- **Apache Kafka (Strimzi)** - Message queue (3 partitions)
-- **MongoDB (Bitnami)** - Analytics database (9 collections)
+- **Apache Kafka (Strimzi)** - Message broker
+- **MongoDB (Bitnami)** - Analytics database
 - **Kubernetes (Minikube)** - Container orchestration
 - **Python 3.10+** - Application language
-- **Docker** - Containerization
 
-## 🚀 Quick Start (5 Steps)
+## 📁 Project Structure
+
+```
+BTL_IT4931/
+├── app/                          # Application code
+│   ├── config/                   # Configuration management
+│   │   ├── settings.py          # Central settings
+│   │   ├── kafka_config.py      # Kafka configuration
+│   │   ├── mongodb_config.py    # MongoDB configuration
+│   │   └── spark_config.py      # Spark configuration
+│   ├── connectors/              # External system connectors
+│   │   ├── kafka_connector.py   # Kafka read/write
+│   │   └── mongodb_connector.py # MongoDB read/write
+│   ├── models/                  # Data schemas
+│   │   ├── event_schema.py      # Event data schemas
+│   │   ├── product_schema.py    # Product catalog schemas
+│   │   └── user_schema.py       # User dimension schemas
+│   ├── processors/              # Data transformation logic
+│   │   ├── event_enricher.py    # Event enrichment
+│   │   ├── aggregator.py        # Aggregation logic
+│   │   └── session_analyzer.py  # Session analysis
+│   ├── jobs/                    # Spark jobs
+│   │   ├── streaming/          
+│   │   │   └── advanced_streaming.py  # Main streaming job
+│   │   └── batch/
+│   │       └── ml_analytics.py        # ML batch job
+│   └── utils/                   # Utilities
+│       ├── spark_factory.py     # Spark session factory
+│       └── event_simulator.py   # Kafka event producer
+├── deploy/                      # Deployment configurations
+│   ├── docker/
+│   │   └── Dockerfile          # Container image
+│   ├── kubernetes/
+│   │   └── base/               # K8s manifests
+│   └── scripts/                # Deployment scripts
+├── config/                      # Configuration files
+│   ├── .env.example            # Environment template
+│   └── .env                    # Local environment (git-ignored)
+├── data/
+│   ├── catalog/                # Dimension tables (CSV)
+│   └── raw/                    # Raw event data (5.3GB CSV)
+├── docs/                        # Documentation
+├── tests/                       # Unit & integration tests
+├── notebooks/                   # Jupyter notebooks for analysis
+├── setup.py                     # Python package setup
+├── Makefile                     # Development commands
+└── README.md                    # This file
+```
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Docker** (20.10+)
+- **Minikube** (v1.25+)
+- **kubectl** (v1.25+)
+- **Helm** (v3.0+)
+- **Python 3.10+**
+- **System**: 4 CPU cores, 8GB RAM, 20GB disk
+
+### Installation
 
 ```bash
 # 1. Clone the repository
@@ -38,323 +101,242 @@ git clone https://github.com/minhngobka/BTL_IT4931.git
 cd BTL_IT4931
 
 # 2. Download dataset (5.3GB)
-# Get 2019-Oct.csv from: https://www.kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store
+# Get 2019-Oct.csv from Kaggle:
+# https://www.kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store
 # Place it in: data/raw/ecommerce_events_2019_oct.csv
 
-# 3. Start Minikube with sufficient resources
-minikube start --cpus=4 --memory=8192
+# 3. Install Python dependencies
+make install
 
-# 4. Run automated deployment (installs Kafka, MongoDB, Spark)
-./scripts/deploy_all.sh
+# 4. Set up configuration
+make setup-env
+# Edit config/.env with your settings
 
-# 5. Update Kafka broker address and start simulator
-export MINIKUBE_IP=$(minikube ip)
-sed -i "s|KAFKA_EXTERNAL_BROKER=.*|KAFKA_EXTERNAL_BROKER=$MINIKUBE_IP:31927|" config/.env
-python src/utils/event_simulator.py
+# 5. Start Minikube
+make minikube-start
+
+# 6. Deploy all components (Kafka, MongoDB, Spark)
+make deploy
+
+# 7. Start event simulator
+make run-simulator
 ```
 
 **⏱️ Total time:** ~25 minutes
 
-## 📋 Prerequisites
+## 💻 Usage
 
-Before running the project, ensure you have:
+### Run Streaming Analytics
 
-**Required Software:**
-- **Docker** (20.10+) 
-- **Minikube** (v1.25+)
-- **kubectl** (v1.25+)
-- **Helm** (v3.0+)
-- **Python 3.10+**
-
-**System Requirements:**
-- **CPU:** 4 cores minimum
-- **RAM:** 8GB minimum
-- **Disk:** 20GB free space
-- **OS:** Linux (Ubuntu 20.04+)
-
-**Quick Install Commands:**
 ```bash
-# Docker
-sudo apt install docker.io
-sudo usermod -aG docker $USER
+# Using Make
+make run-streaming
 
-# Minikube
-curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-sudo install minikube-linux-amd64 /usr/local/bin/minikube
-
-# kubectl
-sudo snap install kubectl --classic
-
-# Helm
-sudo snap install helm --classic
-
-# Python environment
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+# Or directly
+python -m app.jobs.streaming.advanced_streaming
 ```
 
-## 📁 Project Structure
+### Run ML Batch Job
 
-```
-bigdata_project/
-├── src/                          # Source code
-│   ├── streaming/                # Real-time streaming apps
-│   │   ├── streaming_basic.py
-│   │   ├── streaming_advanced.py    # ← Main production app
-│   │   └── streaming_kubernetes.py
-│   ├── batch/                    # Batch processing
-│   │   ├── ml_analytics.py          # ← ML pipeline
-│   │   └── journey_analysis.py
-│   └── utils/                    # Utilities
-│       ├── event_simulator.py       # ← Kafka producer
-│       ├── dimension_generator.py
-│       └── validate_environment.sh
-├── data/
-│   ├── raw/                      # Raw data (CSV)
-│   └── catalog/                  # Dimension tables
-├── config/                       # Configuration files
-│   ├── .env                      # Local environment
-│   ├── .env.example              # Template
-│   └── kafka-strimzi.yaml
-├── kubernetes/                   # K8s manifests
-│   └── spark-deployments.yaml
-├── scripts/
-│   └── deploy_all.sh             # ← Run this!
-├── docs/                         # Documentation
-│   ├── README.md
-│   ├── SETUP_GUIDE.md
-│   └── TECHNICAL_DOCS.md
-└── Dockerfile
+```bash
+# Using Make
+make run-ml
+
+# Or directly
+python -m app.jobs.batch.ml_analytics
 ```
 
-## 🎯 What It Does
+### Monitor Applications
 
-### Real-Time Analytics
+```bash
+# Check status
+make status
 
-**Input:** E-commerce events (view, cart, purchase)
-```json
-{
-  "event_time": "2019-10-01 00:00:00 UTC",
-  "event_type": "purchase",
-  "product_id": 3900821,
-  "brand": "samsung",
-  "price": 489.99,
-  "user_id": 554748717,
-  "user_session": "9333dfbd-b87a-4708-9857-6336556b0fcc"
-}
+# View streaming logs
+make logs-streaming
+
+# Access Spark UI
+make port-forward-spark
+# Open http://localhost:4040
+
+# Query MongoDB
+make query-mongo
 ```
 
-**Processing:**
-- Enriches events with product metadata (broadcast join)
-- Calculates windowed aggregations (5-min tumbling, 10-min sliding)
-- Tracks user sessions with state management
-- Analyzes conversion funnels (view → cart → purchase)
+## 📊 Data Flow
 
-**Output:** 9 MongoDB collections with insights
-- `enriched_events` - Processed events
-- `user_session_analytics` - Session-level metrics
-- `conversion_funnel` - Conversion rates
-- `event_aggregations` - Time-windowed stats
-- `customer_segments` - ML clustering results
-- `churn_predictions` - Churn probability scores
+### Streaming Pipeline
 
-### Batch Machine Learning
+1. **Event Simulator** reads CSV and produces to Kafka
+2. **Spark Streaming** consumes from Kafka
+3. **Event Enricher** joins events with product/user dimensions
+4. **Aggregators** compute windowed metrics
+5. **Session Analyzer** analyzes user journeys
+6. Results written to MongoDB collections
 
-**K-Means Clustering (4 clusters):**
-- Segments customers based on behavior patterns
-- Features: purchase frequency, avg order value, session duration
+### Batch ML Pipeline
 
-**Random Forest Classification:**
-- Predicts customer churn
-- 80/20 train-test split
-- AUC: 0.75-0.85
+1. **Load** enriched events from MongoDB
+2. **Feature Engineering** creates user-level metrics
+3. **K-Means** segments customers into clusters
+4. **Random Forest** predicts customer churn
+5. Results saved to MongoDB
 
 ## 🔧 Configuration
 
-Edit `config/.env` for your environment:
+Configuration is managed through environment variables in `config/.env`:
 
 ```env
 # Kafka
-KAFKA_EXTERNAL_BROKER=192.168.49.2:31927  # Update with minikube ip
+KAFKA_INTERNAL_BROKER=my-cluster-kafka-bootstrap.default.svc.cluster.local:9092
+KAFKA_EXTERNAL_BROKER=192.168.49.2:31927
 KAFKA_TOPIC=customer_events
 
 # MongoDB
-MONGODB_HOST=localhost
-MONGODB_PORT=27017
+MONGODB_URI=mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/
 MONGODB_DATABASE=bigdata_db
 
 # Simulator
 CSV_FILE_PATH=data/raw/ecommerce_events_2019_oct.csv
 CHUNK_SIZE=1000
 SLEEP_TIME=0.01
+
+# Spark
+CHECKPOINT_BASE=/opt/spark/work-dir/checkpoints
+SPARK_MASTER=local[*]
 ```
 
-## 📊 Monitoring & Verification
-
-### Check Deployment Status
+## 🧪 Testing
 
 ```bash
-# Check all pods are running
+# Run all tests
+make test
+
+# Run with coverage
+pytest tests/ -v --cov=app --cov-report=html
+
+# Lint code
+make lint
+
+# Format code
+make format
+```
+
+## 📖 Documentation
+
+- **[USAGE.md](USAGE.md)** - Complete setup and usage guide
+- **[TECHNICAL.md](TECHNICAL.md)** - Architecture and technical details
+
+For quick reference, run `make help` to see all available commands.
+
+## 🛠️ Development
+
+### Using Make Commands
+
+```bash
+make help              # Show all available commands
+make install-dev       # Install development dependencies
+make format            # Format code with black
+make lint              # Run linters
+make test              # Run tests
+make clean             # Clean generated files
+make build-docker      # Build Docker image
+make deploy            # Deploy all components
+make undeploy          # Remove all deployments
+```
+
+### Code Structure
+
+- **Modular design**: Separation of concerns (connectors, processors, jobs)
+- **Configuration management**: Centralized settings
+- **Type hints**: Throughout the codebase
+- **Documentation**: Docstrings for all modules and functions
+
+## 📈 Monitoring
+
+### Kubernetes
+
+```bash
+# Pod status
 kubectl get pods
 
-# Expected output:
-# my-cluster-kafka-0                Running
-# my-cluster-zookeeper-0            Running
-# my-mongo-mongodb-0                Running
-# spark-streaming-advanced-xxx      Running
+# Service endpoints
+kubectl get services
+
+# Application logs
+kubectl logs -f <pod-name>
 ```
 
-### Monitor Spark Streaming
+### Spark UI
 
 ```bash
-# Port-forward Spark UI
+# Port forward Spark UI
 kubectl port-forward deployment/spark-streaming-advanced 4040:4040
-
-# Open in browser: http://localhost:4040
+# Access: http://localhost:4040
 ```
 
-### Query MongoDB
+### MongoDB
 
 ```bash
-# ⭐ CÁCH TỐT NHẤT: Query trực tiếp vào pod MongoDB (đáng tin cậy 100%)
-bash scripts/demo_mongodb.sh
+# Port forward MongoDB
+kubectl port-forward svc/my-mongo-mongodb 27017:27017
 
-# HOẶC query thủ công:
-kubectl exec deployment/my-mongo-mongodb -- mongosh bigdata_db --quiet --eval "
-  print('📊 Total records:', db.enriched_events.countDocuments());
-  db.enriched_events.find().limit(2).forEach(printjson);
-"
-
-# Query với aggregation pipeline
-kubectl exec deployment/my-mongo-mongodb -- mongosh bigdata_db --quiet --eval "
-  db.enriched_events.aggregate([
-    {\$match: {event_type: 'view'}},
-    {\$group: {_id: '\$product_id', views: {\$sum: 1}}},
-    {\$sort: {views: -1}},
-    {\$limit: 5}
-  ]).forEach(printjson)
-"
-
-# 💡 LƯU Ý: Port-forward tới localhost có thể không ổn định
-# Khuyến nghị dùng kubectl exec để query trực tiếp vào pod
-```
-
-### Check Kafka
-
-```bash
-# List topics
-kubectl exec -it my-cluster-kafka-0 -- bin/kafka-topics.sh \
-  --bootstrap-server localhost:9092 --list
-
-# Consume messages
-kubectl exec -it my-cluster-kafka-0 -- bin/kafka-console-consumer.sh \
-  --bootstrap-server localhost:9092 \
-  --topic customer_events --from-beginning --max-messages 10
+# Query collections
+mongosh mongodb://localhost:27017/bigdata_db
 ```
 
 ## 🐛 Troubleshooting
 
-### Pods Stuck in Pending/ImagePullBackOff
+Common issues and solutions:
 
+**Pods stuck in Pending/ImagePullBackOff:**
 ```bash
-# Check pod details
 kubectl describe pod <pod-name>
-
-# Reload Docker image to Minikube
-docker build -t bigdata-spark:latest .
+docker build -t bigdata-spark:latest -f deploy/docker/Dockerfile .
 minikube image load bigdata-spark:latest
-
-# Restart deployment
 kubectl rollout restart deployment/spark-streaming-advanced
 ```
 
-### Kafka Connection Failed
-
+**Kafka connection failed:**
 ```bash
-# Get Minikube IP
-minikube ip
-
-# Update .env file
-sed -i "s|KAFKA_EXTERNAL_BROKER=.*|KAFKA_EXTERNAL_BROKER=$(minikube ip):31927|" config/.env
-
-# Verify Kafka service
+minikube ip  # Update config/.env with this IP
 kubectl get svc my-cluster-kafka-external-bootstrap
 ```
 
-### MongoDB Connection Issues
-
+**MongoDB connection issues:**
 ```bash
-# Check MongoDB is running
-kubectl get pods | grep mongodb
-
-# ⭐ Query trực tiếp vào pod (không cần port-forward)
-kubectl exec deployment/my-mongo-mongodb -- mongosh bigdata_db --quiet --eval "
-  db.enriched_events.countDocuments()
-"
-
-# Nếu vẫn muốn dùng port-forward
-kubectl port-forward svc/my-mongo-mongodb 27017:27017
-kubectl port-forward svc/my-mongo-mongodb 27017:27017
-
-# Test connection
-mongosh mongodb://localhost:27017/bigdata_db --eval "db.runCommand({ ping: 1 })"
+kubectl exec deployment/my-mongo-mongodb -- mongosh bigdata_db --quiet --eval "db.enriched_events.countDocuments()"
 ```
 
-### Event Simulator Not Working
-
-```bash
-# Check .env file exists
-cat config/.env
-
-# Verify CSV file location
-ls -lh data/raw/ecommerce_events_2019_oct.csv
-
-# Test Kafka connectivity
-python -c "from kafka import KafkaProducer; print('OK')"
-```
-
-## 🧹 Cleanup
-
-```bash
-# Delete all Kubernetes resources
-kubectl delete -f kubernetes/spark-deployments.yaml
-kubectl delete -f config/kafka-strimzi.yaml
-
-# Or stop Minikube completely
-minikube stop
-minikube delete
-```
-
-## 📚 Detailed Documentation
-
-- **[docs/SETUP_GUIDE.md](docs/SETUP_GUIDE.md)** - Complete step-by-step setup (12 phases)
-- **[docs/TECHNICAL_DOCS.md](docs/TECHNICAL_DOCS.md)** - Architecture & technical details
-- **[docs/README.md](docs/README.md)** - Detailed feature explanations
+See **USAGE.md** for more detailed troubleshooting.
 
 ## 🎓 Academic Context
 
 **Course:** IT4931 - Big Data Analytics  
 **Topic:** Real-time Customer Journey Analytics  
 **Technologies Demonstrated:**
-- Distributed stream processing (Spark Structured Streaming)
-- Message queuing (Apache Kafka)
-- NoSQL databases (MongoDB)
-- Container orchestration (Kubernetes)
-- Machine Learning (MLlib)
-- Data engineering best practices
-
-## �� Team Members
-
-For teammates cloning this project:
-1. Follow the **Quick Start** section above
-2. Read `docs/SETUP_GUIDE.md` for detailed explanations
-3. Check `config/.env.example` for configuration options
+- Distributed stream processing
+- Message queuing
+- NoSQL databases
+- Container orchestration
+- Machine Learning
 
 ## 📄 License
 
-Academic project for IT4931 course.
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing
+
+This is an academic project. For teammates:
+1. Follow the code structure and conventions
+2. Add tests for new features
+3. Update documentation
+4. Use the Makefile for common tasks
+
+## 📧 Contact
+
+For questions or issues, please open an issue on GitHub.
 
 ---
 
-**Need help?** Check the troubleshooting section above or see `docs/SETUP_GUIDE.md` for more details.
+**Last Updated:** December 2025
