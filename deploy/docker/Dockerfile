@@ -14,7 +14,8 @@ RUN pip install --no-cache-dir \
     scikit-learn \
     matplotlib \
     seaborn \
-    pyarrow
+    pyarrow \
+    python-dotenv
 
 # -----------------------------------------------------------------
 # BƯỚC 2: Tải sẵn (Pre-download) các file JARs

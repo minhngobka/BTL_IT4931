@@ -23,6 +23,11 @@ class MongoDBConfig:
     PRODUCT_AFFINITY: str = "product_affinity_matrix"
     STATISTICAL_ANALYSIS: str = "statistical_analysis"
     
+    # User Behavior Classification Collections (NEW)
+    USER_BEHAVIOR_SEGMENTS: str = "user_behavior_segments"
+    SEGMENT_DISTRIBUTION: str = "segment_distribution"
+    BEHAVIOR_TRENDS: str = "behavior_trends"
+    
     def get_spark_write_options(self, collection: str) -> Dict[str, str]:
         """Get MongoDB write options for Spark"""
         return {

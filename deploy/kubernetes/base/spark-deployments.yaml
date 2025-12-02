@@ -75,24 +75,34 @@ spec:
           - |
             echo "Waiting for dependencies to be ready..."
             sleep 30
-            echo "Starting Advanced Streaming Application"
+            echo "Starting User Behavior Classification Streaming"
             /opt/spark/bin/spark-submit \
               --master local[*] \
-              --driver-memory 2g \
-              --executor-memory 2g \
+              --driver-memory 1g \
+              --executor-memory 1g \
               --conf spark.mongodb.write.connection.uri=mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/ \
               --conf spark.mongodb.write.database=bigdata_db \
               --conf spark.sql.streaming.checkpointLocation=/opt/spark/work-dir/checkpoints \
               --conf spark.sql.shuffle.partitions=8 \
               --conf spark.sql.streaming.statefulOperator.checkCorrectness.enabled=false \
-              /opt/spark/work-dir/src/streaming/streaming_advanced.py
+              --conf spark.ui.port=4040 \
+              --conf spark.ui.enabled=true \
+              --conf spark.metrics.namespace=behavior_classification \
+              /opt/spark/work-dir/app/jobs/streaming/advanced_streaming.py
+        ports:
+        - containerPort: 4040
+          name: spark-ui
+          protocol: TCP
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
         resources:
           requests:
-            memory: "3Gi"
-            cpu: "1000m"
+            memory: "1Gi"
+            cpu: "200m"
           limits:
-            memory: "4Gi"
-            cpu: "2000m"
+            memory: "2Gi"
+            cpu: "500m"
         env:
         - name: SPARK_LOCAL_DIRS
           value: /tmp/spark-local
@@ -156,22 +166,22 @@ spec:
             echo "Starting Batch ML Analytics"
             /opt/spark/bin/spark-submit \
               --master local[*] \
-              --driver-memory 3g \
-              --executor-memory 3g \
+              --driver-memory 1g \
+              --executor-memory 1g \
               --conf spark.mongodb.read.connection.uri=mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/ \
               --conf spark.mongodb.write.connection.uri=mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/ \
               --conf spark.mongodb.read.database=bigdata_db \
               --conf spark.mongodb.write.database=bigdata_db \
               --conf spark.sql.shuffle.partitions=8 \
               --conf spark.sql.adaptive.enabled=true \
-              /opt/spark/work-dir/src/batch/ml_analytics.py
+              /opt/spark/work-dir/app/jobs/batch/ml_analytics.py
         resources:
           requests:
-            memory: "4Gi"
-            cpu: "2000m"
+            memory: "1Gi"
+            cpu: "200m"
           limits:
-            memory: "6Gi"
-            cpu: "3000m"
+            memory: "2Gi"
+            cpu: "500m"
         env:
         - name: SPARK_LOCAL_DIRS
           value: /tmp/spark-local
@@ -210,18 +220,18 @@ spec:
                 echo "Starting Scheduled Batch ML Analytics"
                 /opt/spark/bin/spark-submit \
                   --master local[*] \
-                  --driver-memory 3g \
-                  --executor-memory 3g \
+                  --driver-memory 1g \
+                  --executor-memory 1g \
                   --conf spark.mongodb.read.connection.uri=mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/ \
                   --conf spark.mongodb.write.connection.uri=mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/ \
-                  /opt/spark/work-dir/src/batch/ml_analytics.py
+                  /opt/spark/work-dir/app/jobs/batch/ml_analytics.py
             resources:
               requests:
-                memory: "4Gi"
-                cpu: "2000m"
+                memory: "1Gi"
+                cpu: "200m"
               limits:
-                memory: "6Gi"
-                cpu: "3000m"
+                memory: "2Gi"
+                cpu: "500m"
 
 ---
 apiVersion: v1
@@ -269,21 +279,21 @@ spec:
             echo "Starting Streaming with PVC"
             /opt/spark/bin/spark-submit \
               --master local[*] \
-              --driver-memory 2g \
-              --executor-memory 2g \
+              --driver-memory 1g \
+              --executor-memory 1g \
               --conf spark.mongodb.write.connection.uri=mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/ \
               --conf spark.mongodb.write.database=bigdata_db \
               --conf spark.sql.streaming.checkpointLocation=/checkpoints \
               --conf spark.sql.shuffle.partitions=8 \
               --conf spark.sql.streaming.statefulOperator.checkCorrectness.enabled=false \
-              /opt/spark/work-dir/src/streaming/streaming_advanced.py
+              /opt/spark/work-dir/app/jobs/streaming/advanced_streaming.py
         resources:
           requests:
-            memory: "3Gi"
-            cpu: "1000m"
+            memory: "1Gi"
+            cpu: "200m"
           limits:
-            memory: "4Gi"
-            cpu: "2000m"
+            memory: "2Gi"
+            cpu: "500m"
         env:
         - name: SPARK_LOCAL_DIRS
           value: /tmp/spark-local

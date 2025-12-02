@@ -1,0 +1,211 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: behavior-classification-dashboard
+  namespace: default
+data:
+  behavior-classification.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "uid": "behavior-classification",
+        "title": "User Behavior Classification - Real-time",
+        "tags": ["behavior", "spark", "streaming"],
+        "timezone": "browser",
+        "schemaVersion": 16,
+        "version": 0,
+        "refresh": "5s",
+        "panels": [
+          {
+            "id": 1,
+            "type": "stat",
+            "title": "Total Sessions Classified",
+            "targets": [
+              {
+                "expr": "sum(spark_streaming_sessions_total)",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+            "fieldConfig": {
+              "defaults": {
+                "color": {"mode": "thresholds"},
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": null, "color": "green"}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 2,
+            "type": "piechart",
+            "title": "Segment Distribution",
+            "targets": [
+              {
+                "collection": "user_behavior_segments",
+                "aggregate": "db.user_behavior_segments.aggregate([{$group: {_id: '$behavior_segment', count: {$sum: 1}}}])",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+            "options": {
+              "legend": {
+                "display": true,
+                "placement": "right"
+              }
+            }
+          },
+          {
+            "id": 3,
+            "type": "timeseries",
+            "title": "Sessions per Minute by Segment",
+            "targets": [
+              {
+                "expr": "rate(spark_streaming_sessions_by_segment[1m])",
+                "legendFormat": "{{segment}}",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+            "fieldConfig": {
+              "defaults": {
+                "custom": {
+                  "drawStyle": "line",
+                  "lineInterpolation": "smooth",
+                  "fillOpacity": 10
+                }
+              }
+            }
+          },
+          {
+            "id": 4,
+            "type": "bargauge",
+            "title": "Conversion Rates by Segment",
+            "targets": [
+              {
+                "collection": "conversion_funnel",
+                "aggregate": "db.conversion_funnel.find({})",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+            "options": {
+              "orientation": "horizontal",
+              "displayMode": "gradient"
+            }
+          },
+          {
+            "id": 5,
+            "type": "table",
+            "title": "Top 10 Power Users",
+            "targets": [
+              {
+                "collection": "user_behavior_segments",
+                "aggregate": "db.user_behavior_segments.find({behavior_segment: 'power_user'}).sort({segment_score: -1}).limit(10)",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
+          },
+          {
+            "id": 6,
+            "type": "stat",
+            "title": "Average Session Duration (min)",
+            "targets": [
+              {
+                "collection": "user_behavior_segments",
+                "aggregate": "db.user_behavior_segments.aggregate([{$group: {_id: null, avgDuration: {$avg: '$session_metrics.session_duration_minutes'}}}])",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+            "fieldConfig": {
+              "defaults": {
+                "unit": "m",
+                "decimals": 2
+              }
+            }
+          },
+          {
+            "id": 7,
+            "type": "stat",
+            "title": "Total Revenue ($)",
+            "targets": [
+              {
+                "collection": "user_behavior_segments",
+                "aggregate": "db.user_behavior_segments.aggregate([{$group: {_id: null, totalRevenue: {$sum: '$session_metrics.total_amount'}}}])",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+            "fieldConfig": {
+              "defaults": {
+                "unit": "currencyUSD",
+                "color": {"mode": "thresholds"},
+                "thresholds": {
+                  "steps": [
+                    {"value": null, "color": "green"}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 8,
+            "type": "timeseries",
+            "title": "Spark Streaming Processing Rate",
+            "targets": [
+              {
+                "expr": "rate(spark_streaming_records_processed[1m])",
+                "legendFormat": "Records/sec",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 6, "w": 12, "x": 0, "y": 20}
+          },
+          {
+            "id": 9,
+            "type": "timeseries",
+            "title": "Spark Streaming Latency",
+            "targets": [
+              {
+                "expr": "spark_streaming_processing_latency_ms",
+                "legendFormat": "Latency (ms)",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 6, "w": 12, "x": 12, "y": 20},
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ms",
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": null, "color": "green"},
+                    {"value": 1000, "color": "yellow"},
+                    {"value": 5000, "color": "red"}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 10,
+            "type": "heatmap",
+            "title": "Session Duration Distribution",
+            "targets": [
+              {
+                "collection": "user_behavior_segments",
+                "aggregate": "db.user_behavior_segments.aggregate([{$bucket: {groupBy: '$session_metrics.session_duration_minutes', boundaries: [0, 1, 5, 10, 15, 30, 60], default: 'Other', output: {count: {$sum: 1}}}}])",
+                "refId": "A"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 26}
+          }
+        ]
+      }
+    }

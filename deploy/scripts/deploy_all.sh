@@ -346,7 +346,97 @@ echo ""
 echo -e "${GREEN}✓ Spark applications deployed!${NC}"
 wait_for_user
 
-echo -e "${BLUE}=== PHASE 9: Get Kafka Connection Info ===${NC}"
+echo -e "${BLUE}=== PHASE 9: Deploy Monitoring Stack ===${NC}"
+echo ""
+
+echo "Deploying Prometheus + Grafana monitoring stack..."
+echo "This will enable real-time dashboards and Spark UI access"
+echo ""
+
+# Deploy monitoring components
+echo "Deploying Prometheus..."
+kubectl apply -f deploy/kubernetes/monitoring/prometheus-config.yaml
+check_success
+
+sleep 5
+
+echo ""
+echo "Deploying Grafana..."
+kubectl apply -f deploy/kubernetes/monitoring/grafana.yaml
+check_success
+
+sleep 5
+
+echo ""
+echo "Deploying behavior classification dashboard..."
+kubectl apply -f deploy/kubernetes/monitoring/behavior-dashboard.yaml
+check_success
+
+echo ""
+echo "Exposing Spark UI..."
+kubectl apply -f deploy/kubernetes/monitoring/spark-ui-service.yaml
+check_success
+
+echo ""
+echo "Waiting for monitoring stack to be ready..."
+kubectl wait --for=condition=ready pod -l app=prometheus --timeout=120s 2>/dev/null || echo "Prometheus starting..."
+kubectl wait --for=condition=ready pod -l app=grafana --timeout=120s 2>/dev/null || echo "Grafana starting..."
+
+echo ""
+echo "Monitoring stack status:"
+kubectl get pods | grep -E "prometheus|grafana|mongodb-exporter" || echo "Still initializing..."
+
+echo ""
+echo -e "${GREEN}✓ Monitoring stack deployed!${NC}"
+wait_for_user
+
+echo -e "${BLUE}=== PHASE 10: Setup Port-Forwards for Monitoring ===${NC}"
+echo ""
+
+echo "Setting up port-forwards for local access..."
+echo "This allows you to access dashboards from your browser"
+echo ""
+
+# Kill any existing port-forwards
+pkill -f "port-forward.*grafana" 2>/dev/null || true
+pkill -f "port-forward.*prometheus" 2>/dev/null || true
+pkill -f "port-forward.*spark" 2>/dev/null || true
+sleep 2
+
+# Start port-forwards in background
+echo "Starting Grafana port-forward (3000)..."
+kubectl port-forward svc/grafana 3000:3000 > /dev/null 2>&1 &
+GRAFANA_PID=$!
+
+echo "Starting Prometheus port-forward (9090)..."
+kubectl port-forward svc/prometheus 9090:9090 > /dev/null 2>&1 &
+PROMETHEUS_PID=$!
+
+echo "Starting Spark UI port-forward (4040)..."
+kubectl port-forward svc/spark-streaming-svc 4040:4040 > /dev/null 2>&1 &
+SPARK_UI_PID=$!
+
+sleep 3
+
+echo ""
+echo -e "${GREEN}✓ Port-forwards active!${NC}"
+echo ""
+echo "Access your monitoring dashboards:"
+echo "  📊 Grafana:    http://localhost:3000 (admin/admin123)"
+echo "  📈 Prometheus: http://localhost:9090"
+echo "  🎯 Spark UI:   http://localhost:4040"
+echo ""
+echo "Port-forward PIDs: Grafana=$GRAFANA_PID, Prometheus=$PROMETHEUS_PID, Spark=$SPARK_UI_PID"
+echo ""
+
+# Save PIDs to file for later cleanup
+echo "$GRAFANA_PID" > /tmp/monitoring-pids.txt
+echo "$PROMETHEUS_PID" >> /tmp/monitoring-pids.txt
+echo "$SPARK_UI_PID" >> /tmp/monitoring-pids.txt
+
+wait_for_user
+
+echo -e "${BLUE}=== PHASE 11: Get Kafka Connection Info ===${NC}"
 echo ""
 
 KAFKA_PORT=$(kubectl get service my-cluster-kafka-external-bootstrap -o jsonpath='{.spec.ports[0].nodePort}')
@@ -365,73 +455,120 @@ echo ""
 
 wait_for_user
 
-echo -e "${BLUE}=== PHASE 10: Verify Deployment ===${NC}"
+echo -e "${BLUE}=== PHASE 12: Verify Deployment ===${NC}"
 echo ""
 
 echo "Running validation checks..."
 echo ""
 
-# Run validation script if it exists
-if [ -f "validate_setup.sh" ]; then
-    chmod +x validate_setup.sh
-    ./validate_setup.sh
-else
-    # Manual checks
-    echo "Checking all components..."
-    echo ""
-    
-    echo "MongoDB:"
-    kubectl get pods | grep mongo
-    echo ""
-    
-    echo "Kafka:"
-    kubectl get pods | grep kafka
-    echo ""
-    
-    echo "Spark:"
-    kubectl get pods | grep spark
-    echo ""
-fi
+# Manual checks
+echo "Checking all components..."
+echo ""
+
+echo "MongoDB:"
+kubectl get pods | grep mongo
+echo ""
+
+echo "Kafka:"
+kubectl get pods | grep kafka
+echo ""
+
+echo "Spark:"
+kubectl get pods | grep spark
+echo ""
+
+echo "Monitoring:"
+kubectl get pods | grep -E "prometheus|grafana" || echo "Monitoring pods still starting..."
+echo ""
 
 echo ""
 echo -e "${GREEN}✓ Deployment verification complete!${NC}"
 wait_for_user
 
 echo ""
-echo -e "${BLUE}=========================================="
-echo "Setup Complete! Next Steps:"
-echo -e "==========================================${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════════════════════════"
+echo "  🎉 DEPLOYMENT COMPLETE - USER BEHAVIOR CLASSIFICATION PIPELINE"
+echo -e "═══════════════════════════════════════════════════════════════════════════${NC}"
 echo ""
-echo "1. ${YELLOW}Update config/.env${NC} with Kafka address:"
-echo "   KAFKA_EXTERNAL_BROKER=${GREEN}$MINIKUBE_IP:$KAFKA_PORT${NC}"
+echo -e "${GREEN}✅ All components deployed successfully!${NC}"
 echo ""
-echo "2. ${YELLOW}Run the simulator${NC} (in this same terminal):"
-echo "   ${GREEN}python -m app.utils.event_simulator${NC}"
-echo "   OR: ${GREEN}make run-simulator${NC}"
+echo "📊 ${YELLOW}MONITORING DASHBOARDS (Already Port-Forwarded):${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "3. ${YELLOW}Monitor streaming logs${NC} (open new terminal):"
-echo "   ${GREEN}kubectl logs -f deployment/spark-streaming-advanced${NC}"
+echo "  🎯 ${GREEN}Grafana Dashboard:${NC}    http://localhost:3000"
+echo "     Username: admin"
+echo "     Password: admin123"
+echo "     → Pre-configured User Behavior Classification dashboard"
 echo ""
-echo "4. ${YELLOW}Access Spark UI${NC} (open new terminal):"
-echo "   ${GREEN}kubectl port-forward deployment/spark-streaming-advanced 4040:4040${NC}"
-echo "   Then open browser: http://localhost:4040"
+echo "  📈 ${GREEN}Spark UI:${NC}             http://localhost:4040"
+echo "     → View streaming job status, DAG visualization, metrics"
 echo ""
-echo "5. ${YELLOW}Run batch ML job${NC} (after 5-10 minutes of data):"
-echo "   ${GREEN}kubectl create job spark-batch-manual --from=cronjob/spark-batch-ml-scheduled${NC}"
+echo "  📊 ${GREEN}Prometheus:${NC}           http://localhost:9090"
+echo "     → Query raw metrics and create custom dashboards"
 echo ""
-echo "6. ${YELLOW}Query MongoDB${NC} (open new terminal):"
-echo "   ${GREEN}kubectl port-forward service/my-mongo-mongodb 27017:27017${NC}"
-echo "   ${GREEN}mongosh mongodb://localhost:27017${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo -e "${BLUE}=========================================="
-echo "Useful Commands:"
-echo -e "==========================================${NC}"
+echo "🚀 ${YELLOW}QUICK START COMMANDS:${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "View all pods:          ${GREEN}kubectl get pods${NC}"
-echo "View logs:              ${GREEN}kubectl logs <pod-name>${NC}"
-echo "Describe pod:           ${GREEN}kubectl describe pod <pod-name>${NC}"
-echo "Delete pod:             ${GREEN}kubectl delete pod <pod-name>${NC}"
-echo "Restart deployment:     ${GREEN}kubectl rollout restart deployment/spark-streaming-advanced${NC}"
+echo "1. ${GREEN}Update Kafka config:${NC}"
+echo "   Edit config/.env and set:"
+echo "   KAFKA_EXTERNAL_BROKER=${YELLOW}$MINIKUBE_IP:$KAFKA_PORT${NC}"
 echo ""
-echo -e "${GREEN}Good luck with your project! 🚀${NC}"
+echo "2. ${GREEN}Generate test behavior data:${NC}"
+echo "   ${YELLOW}python -m app.utils.test_behavior_generator${NC}"
+echo ""
+echo "3. ${GREEN}Interactive monitoring menu:${NC}"
+echo "   ${YELLOW}bash deploy/scripts/monitor_streaming.sh${NC}"
+echo ""
+echo "4. ${GREEN}View real-time metrics (CLI):${NC}"
+echo "   ${YELLOW}bash deploy/scripts/view_metrics.sh${NC}"
+echo ""
+echo "5. ${GREEN}Watch Spark logs:${NC}"
+echo "   ${YELLOW}kubectl logs -f deployment/spark-streaming-advanced${NC}"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📊 ${YELLOW}WHAT'S RUNNING:${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "  ✓ Kafka Cluster (events streaming)"
+echo "  ✓ MongoDB (data storage)"
+echo "  ✓ Spark Streaming (behavior classification)"
+echo "  ✓ Prometheus (metrics collection)"
+echo "  ✓ Grafana (visualization dashboards)"
+echo "  ✓ MongoDB Exporter (database metrics)"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "🎯 ${YELLOW}USER BEHAVIOR SEGMENTS TRACKED:${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "  🔴 Bouncer:          1-2 events, <1 min sessions"
+echo "  🟡 Browser:          3-10 events, cart but no purchase"
+echo "  🟢 Engaged Shopper:  10-30 events, multiple purchases"
+echo "  🔵 Power User:       30+ events, high engagement"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "🛠️  ${YELLOW}USEFUL COMMANDS:${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "  View all pods:       ${GREEN}kubectl get pods${NC}"
+echo "  Restart Spark:       ${GREEN}kubectl rollout restart deployment/spark-streaming-advanced${NC}"
+echo "  Scale Spark:         ${GREEN}kubectl scale deployment/spark-streaming-advanced --replicas=2${NC}"
+echo "  View pod logs:       ${GREEN}kubectl logs -f <pod-name>${NC}"
+echo "  Query MongoDB:       ${GREEN}kubectl exec -it <mongo-pod> -- mongosh bigdata${NC}"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "🛑 ${YELLOW}TO STOP PORT-FORWARDS:${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "  ${GREEN}pkill -f 'port-forward'${NC}"
+echo "  Or kill specific PIDs: ${GREEN}kill $GRAFANA_PID $PROMETHEUS_PID $SPARK_UI_PID${NC}"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo -e "${GREEN}🚀 Ready to start! Open the monitoring dashboards in your browser.${NC}"
 echo ""
