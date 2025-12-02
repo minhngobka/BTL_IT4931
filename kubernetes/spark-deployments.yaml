@@ -1,0 +1,303 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-config
+  namespace: default
+data:
+  # Spark Configuration
+  spark.executor.memory: "2g"
+  spark.driver.memory: "2g"
+  spark.executor.cores: "2"
+  spark.sql.shuffle.partitions: "8"
+  
+  # MongoDB Configuration
+  mongodb.uri: "mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/"
+  mongodb.database: "bigdata_db"
+  
+  # Kafka Configuration
+  kafka.bootstrap.servers: "my-cluster-kafka-bootstrap.default.svc.cluster.local:9092"
+  kafka.topic: "customer_events"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-scripts
+  namespace: default
+data:
+  run-streaming-advanced.sh: |
+    #!/bin/bash
+    echo "Starting Advanced Streaming Application..."
+    /opt/spark/bin/spark-submit \
+      --master local[*] \
+      --conf spark.mongodb.write.connection.uri="mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/" \
+      --conf spark.mongodb.write.database="bigdata_db" \
+      --conf spark.sql.streaming.checkpointLocation="/opt/spark/work-dir/checkpoints" \
+      /opt/spark/work-dir/streaming_app_advanced.py
+  
+  run-batch-ml.sh: |
+    #!/bin/bash
+    echo "Starting Batch ML Analytics..."
+    /opt/spark/bin/spark-submit \
+      --master local[*] \
+      --conf spark.mongodb.read.connection.uri="mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/" \
+      --conf spark.mongodb.write.connection.uri="mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/" \
+      --conf spark.mongodb.read.database="bigdata_db" \
+      --conf spark.mongodb.write.database="bigdata_db" \
+      /opt/spark/work-dir/batch_analytics_ml.py
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-streaming-advanced
+  namespace: default
+  labels:
+    app: spark-streaming
+    tier: processing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-streaming
+  template:
+    metadata:
+      labels:
+        app: spark-streaming
+        tier: processing
+    spec:
+      containers:
+      - name: spark-streaming
+        image: bigdata-spark:latest
+        imagePullPolicy: Never
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            echo "Waiting for dependencies to be ready..."
+            sleep 30
+            echo "Starting Advanced Streaming Application"
+            /opt/spark/bin/spark-submit \
+              --master local[*] \
+              --driver-memory 2g \
+              --executor-memory 2g \
+              --conf spark.mongodb.write.connection.uri=mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/ \
+              --conf spark.mongodb.write.database=bigdata_db \
+              --conf spark.sql.streaming.checkpointLocation=/opt/spark/work-dir/checkpoints \
+              --conf spark.sql.shuffle.partitions=8 \
+              --conf spark.sql.streaming.statefulOperator.checkCorrectness.enabled=false \
+              /opt/spark/work-dir/src/streaming/streaming_advanced.py
+        resources:
+          requests:
+            memory: "3Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        env:
+        - name: SPARK_LOCAL_DIRS
+          value: /tmp/spark-local
+        - name: SPARK_WORKER_DIR
+          value: /opt/spark/work-dir
+        volumeMounts:
+        - name: spark-local
+          mountPath: /tmp/spark-local
+        - name: checkpoints
+          mountPath: /opt/spark/work-dir/checkpoints
+      volumes:
+      - name: spark-local
+        emptyDir: {}
+      - name: checkpoints
+        emptyDir: {}
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-streaming-svc
+  namespace: default
+spec:
+  selector:
+    app: spark-streaming
+  ports:
+  - name: spark-ui
+    port: 4040
+    targetPort: 4040
+  type: ClusterIP
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: spark-batch-ml
+  namespace: default
+  labels:
+    app: spark-batch
+    tier: analytics
+spec:
+  ttlSecondsAfterFinished: 3600  # Clean up after 1 hour
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: spark-batch
+        tier: analytics
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: spark-batch
+        image: bigdata-spark:latest
+        imagePullPolicy: Never
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            echo "Waiting for data to be available..."
+            sleep 60
+            echo "Starting Batch ML Analytics"
+            /opt/spark/bin/spark-submit \
+              --master local[*] \
+              --driver-memory 3g \
+              --executor-memory 3g \
+              --conf spark.mongodb.read.connection.uri=mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/ \
+              --conf spark.mongodb.write.connection.uri=mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/ \
+              --conf spark.mongodb.read.database=bigdata_db \
+              --conf spark.mongodb.write.database=bigdata_db \
+              --conf spark.sql.shuffle.partitions=8 \
+              --conf spark.sql.adaptive.enabled=true \
+              /opt/spark/work-dir/src/batch/ml_analytics.py
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+          limits:
+            memory: "6Gi"
+            cpu: "3000m"
+        env:
+        - name: SPARK_LOCAL_DIRS
+          value: /tmp/spark-local
+        volumeMounts:
+        - name: spark-local
+          mountPath: /tmp/spark-local
+      volumes:
+      - name: spark-local
+        emptyDir: {}
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: spark-batch-ml-scheduled
+  namespace: default
+spec:
+  # Run every 6 hours
+  schedule: "0 */6 * * *"
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app: spark-batch-scheduled
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: spark-batch
+            image: bigdata-spark:latest
+            imagePullPolicy: Never
+            command: ["/bin/bash", "-c"]
+            args:
+              - |
+                echo "Starting Scheduled Batch ML Analytics"
+                /opt/spark/bin/spark-submit \
+                  --master local[*] \
+                  --driver-memory 3g \
+                  --executor-memory 3g \
+                  --conf spark.mongodb.read.connection.uri=mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/ \
+                  --conf spark.mongodb.write.connection.uri=mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/ \
+                  /opt/spark/work-dir/src/batch/ml_analytics.py
+            resources:
+              requests:
+                memory: "4Gi"
+                cpu: "2000m"
+              limits:
+                memory: "6Gi"
+                cpu: "3000m"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: spark-checkpoints-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# Optional: Deployment with Persistent Volume for checkpoints
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-streaming-with-pvc
+  namespace: default
+  labels:
+    app: spark-streaming-pvc
+    tier: processing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-streaming-pvc
+  template:
+    metadata:
+      labels:
+        app: spark-streaming-pvc
+        tier: processing
+    spec:
+      containers:
+      - name: spark-streaming
+        image: bigdata-spark:latest
+        imagePullPolicy: Never
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            echo "Waiting for dependencies..."
+            sleep 30
+            echo "Starting Streaming with PVC"
+            /opt/spark/bin/spark-submit \
+              --master local[*] \
+              --driver-memory 2g \
+              --executor-memory 2g \
+              --conf spark.mongodb.write.connection.uri=mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/ \
+              --conf spark.mongodb.write.database=bigdata_db \
+              --conf spark.sql.streaming.checkpointLocation=/checkpoints \
+              --conf spark.sql.shuffle.partitions=8 \
+              --conf spark.sql.streaming.statefulOperator.checkCorrectness.enabled=false \
+              /opt/spark/work-dir/src/streaming/streaming_advanced.py
+        resources:
+          requests:
+            memory: "3Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        env:
+        - name: SPARK_LOCAL_DIRS
+          value: /tmp/spark-local
+        - name: SPARK_WORKER_DIR
+          value: /opt/spark/work-dir
+        volumeMounts:
+        - name: checkpoints
+          mountPath: /checkpoints
+        - name: spark-local
+          mountPath: /tmp/spark-local
+      volumes:
+      - name: checkpoints
+        persistentVolumeClaim:
+          claimName: spark-checkpoints-pvc
+      - name: spark-local
+        emptyDir: {}
+      restartPolicy: Always
