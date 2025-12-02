@@ -29,6 +29,8 @@ from pyspark.sql.types import (
 import pandas as pd
 from typing import Iterator
 
+from pyspark.sql.functions import broadcast
+
 # Load environment variables from config/.env
 env_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config', '.env')
 load_dotenv(dotenv_path=env_path)
@@ -64,6 +66,9 @@ def create_spark_session():
         .config("spark.sql.streaming.metricsEnabled", "true") \
         .config("spark.sql.adaptive.enabled", "true") \
         .config("spark.sql.adaptive.coalescePartitions.enabled", "true") \
+        .config("spark.executor.memory", "4g") \
+        .config("spark.executor.memoryOverhead", "1g") \
+        .config("spark.memory.fraction", "0.8") \
         .getOrCreate()
     
     spark.sparkContext.setLogLevel("WARN")
@@ -92,7 +97,9 @@ def load_dimension_tables(spark):
         .csv("/opt/spark/work-dir/data/catalog/product_catalog.csv")
     
     # Broadcast hint for small dimension table
-    df_products = df_products.hint("broadcast")
+    #df_products = df_products.hint("broadcast")
+    #Broad cast optimization
+    df_products = broadcast(df_products)
     
     # Load user dimension (if exists)
     try:
@@ -109,7 +116,8 @@ def load_dimension_tables(spark):
             .option("header", "true") \
             .csv("/opt/spark/work-dir/user_dimension.csv")
         
-        df_users = df_users.hint("broadcast")
+        #df_users = df_users.hint("broadcast")
+        df_users = broadcast(df_users)
     except:
         df_users = None
         print("User dimension not found, skipping...")

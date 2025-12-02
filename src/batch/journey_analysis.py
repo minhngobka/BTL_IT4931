@@ -2,8 +2,9 @@
 import os
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession, Window
-from pyspark.sql.functions import col, max, when, sum, count, lit, avg, coalesce
+from pyspark.sql.functions import col, max, when, sum, count, lit, avg, coalesce, to_date
 from pyspark.sql.types import DoubleType
+from pyspark import StorageLevel
 from datetime import datetime
 
 # Load environment variables from config/.env
@@ -32,6 +33,10 @@ def main():
         .config("spark.mongodb.write.connection.uri", f"{MONGO_URI_WRITE}{MONGO_DB_NAME_WRITE}.{MONGO_COLLECTION_WRITE}") \
         .getOrCreate()
 
+    #add AQE for batch job
+    spark.conf.set("spark.sql.adaptive.enabled", "true")
+    spark.conf.set("spark.sql.adaptive.coalescePartitions.enabled", "true")
+
     spark.sparkContext.setLogLevel("WARN")
     print("Spark Session đã sẵn sàng. Đang đọc dữ liệu từ MongoDB...")
 
@@ -42,13 +47,40 @@ def main():
         .load()
 
     # Chuyển đổi kiểu dữ liệu và lọc các event quan trọng
+    #add user_id for bucketBy
     df_events = df_events \
         .filter(col("event_type").isin("view", "cart", "purchase")) \
         .filter(col("user_session").isNotNull()) \
-        .select("user_session", "event_timestamp", "event_type")
+        .select("user_session", "user_id", "event_timestamp", "event_type")
 
     print(f"Đã đọc xong. Bắt đầu phân tích {df_events.count()} sự kiện...")
 
+    ########
+    #Some modification 
+    # Thêm cột ngày từ timestamp để partition theo ngày
+    df_events_with_date = df_events.withColumn("event_date", to_date(col("event_timestamp")))
+
+    # 3.1. Ghi ra HDFS với partitionBy (event_date, event_type)
+    df_events_with_date.write \
+        .partitionBy("event_date", "event_type") \
+        .mode("append") \
+        .parquet("hdfs:///data/customer_events_partitioned")
+
+    # Phần này dùng cho phân tích explain() bên dưới
+    df_query = df_events_with_date
+    print("\n=== SV5: Execution plan sau khi thêm partition ===")
+    df_query.explain(mode="formatted")
+
+    # 3.2. Tạo bảng bucketed theo user_id để sau này join nhanh hơn
+    # Lưu ý: bucketBy yêu cầu saveAsTable → dùng Hive metastore / catalog
+    df_events_with_date.write \
+        .bucketBy(20, "user_id") \
+        .sortBy("event_timestamp") \
+        .mode("overwrite") \
+        .saveAsTable("customer_events_bucketed")
+
+
+    #####
     # --- BƯỚC 2: ÁP DỤNG WINDOW FUNCTION ĐỂ PHÂN TÍCH PHIÊN ---
     # Đây là yêu cầu "Window functions" của đề bài
     
@@ -74,7 +106,9 @@ def main():
         .fillna(False) # Thay thế NULL (nếu có) bằng False
 
     # Cache lại để tăng tốc tính toán tiếp theo
-    df_session_summary.cache()
+    #df_session_summary.cache()
+    #Hot data
+    df_session_summary.persist(StorageLevel.MEMORY_ONLY)
     print("Đã phân tích xong trạng thái của từng session.")
 
     # --- BƯỚC 4: TÍNH TOÁN CÁC CHỈ SỐ CHUYỂN ĐỔI (FUNNEL ANALYSIS) ---
