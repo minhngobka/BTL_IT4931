@@ -52,8 +52,16 @@ class EventEnricher:
     
     def enrich_with_products(self, df_events: DataFrame) -> DataFrame:
         """Join events with product catalog"""
+        # Identify columns that exist in both DataFrames
+        event_columns = set(df_events.columns)
+        product_columns = set(self.df_products.columns)
+        duplicate_columns = event_columns.intersection(product_columns) - {'product_id'}
+        
+        # Select only non-duplicate columns from products (plus join key)
+        product_cols_to_keep = [col for col in self.df_products.columns 
+                                if col not in duplicate_columns or col == 'product_id']
         df_enriched = df_events.join(
-            self.df_products,
+            self.df_products.select(*product_cols_to_keep),
             on="product_id",
             how="left"
         )
@@ -78,5 +86,5 @@ class EventEnricher:
         df_parsed = self.parse_kafka_events(df_kafka)
         df_enriched = self.enrich_with_products(df_parsed)
         df_enriched = self.enrich_with_users(df_enriched)
-        
+        df_enriched = df_enriched.withWatermark("event_timestamp", "10 minutes")
         return df_enriched

@@ -12,6 +12,7 @@ from pyspark.sql.functions import (
 )
 from pyspark.sql.window import Window
 from typing import Dict, List
+from pyspark.sql.functions import approx_count_distinct
 
 
 class BehaviorClassifier:
@@ -77,8 +78,8 @@ class BehaviorClassifier:
             count(when(col("event_type") == "remove_from_cart", 1)).alias("remove_cart_count"),
             
             # Product diversity
-            countDistinct("product_id").alias("unique_products"),
-            countDistinct("category_code").alias("unique_categories"),
+            approx_count_distinct("product_id").alias("unique_products"),
+            approx_count_distinct("category_code").alias("unique_categories"),
             
             # Revenue (chỉ tính purchase events)
             _sum(when(col("event_type") == "purchase", col("price"))).alias("total_amount"),
@@ -271,7 +272,7 @@ class BehaviorClassifier:
                 avg("total_events").alias("avg_events"),
                 avg("session_duration_minutes").alias("avg_duration"),
                 _sum("total_amount").alias("total_revenue"),
-                countDistinct("user_id").alias("unique_users")
+                approx_count_distinct("user_id").alias("unique_users")
             )
         
         # Flatten window struct
@@ -300,7 +301,7 @@ class BehaviorClassifier:
         
         funnel = df.groupBy("behavior_segment").agg(
             count("*").alias("total_sessions"),
-            countDistinct("user_id").alias("unique_users"),
+            approx_count_distinct("user_id").alias("unique_users"),
             _sum("view_count").alias("total_views"),
             _sum("cart_count").alias("total_carts"),
             _sum("purchase_count").alias("total_purchases"),

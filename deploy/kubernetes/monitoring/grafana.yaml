@@ -140,7 +140,7 @@ spec:
     spec:
       containers:
       - name: mongodb-exporter
-        image: percona/mongodb_exporter:latest
+        image: percona/mongodb_exporter:0.47.2
         args:
           - '--mongodb.uri=mongodb://admin:password@my-mongo-mongodb:27017'
           - '--collect-all'
