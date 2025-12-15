@@ -1,0 +1,6 @@
+grafana:
+  plugins:
+    - https://github.com/haohanyang/mongodb-datasource/releases/download/v0.4.1/haohanyang-mongodb-datasource-0.4.1.zip;grafana-mongodb-datasource
+
+  env:
+    GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: "grafana-mongodb-datasource"

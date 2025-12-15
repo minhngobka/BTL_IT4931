@@ -31,7 +31,7 @@ class Settings:
         'my-cluster-kafka-bootstrap.default.svc.cluster.local:9092'
     )
     KAFKA_EXTERNAL_BROKER: str = os.getenv('KAFKA_EXTERNAL_BROKER', '192.168.49.2:31927')
-    KAFKA_TOPIC: str = os.getenv('KAFKA_TOPIC', 'customer_events')
+    KAFKA_TOPIC: str = os.getenv('KAFKA_TOPIC', 'customer-events')
     
     # MongoDB settings
     MONGODB_URI: str = os.getenv(

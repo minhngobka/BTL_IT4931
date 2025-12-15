@@ -332,7 +332,7 @@ echo ""
 echo "Waiting for Spark streaming deployment to be ready..."
 sleep 10  # Give K8s time to create the deployment
 
-kubectl wait --for=condition=available deployment/spark-streaming-advanced --timeout=300s 2>/dev/null || echo "Still starting..."
+kubectl wait --for=condition=available deployment.apps/spark-streaming-with-pvc --timeout=300s 2>/dev/null || echo "Still starting..."
 
 echo ""
 echo "Current deployments:"
@@ -346,72 +346,20 @@ echo ""
 echo -e "${GREEN}✓ Spark applications deployed!${NC}"
 wait_for_user
 
-echo -e "${BLUE}=== PHASE 9: Deploy Monitoring Stack ===${NC}"
-echo ""
 
-echo "Deploying Prometheus + Grafana monitoring stack..."
-echo "This will enable real-time dashboards and Spark UI access"
-echo ""
 
-# Deploy monitoring components
-echo "Deploying Prometheus..."
-kubectl apply -f deploy/kubernetes/monitoring/prometheus-config.yaml
-check_success
-
-sleep 5
-
-echo ""
-echo "Deploying Grafana..."
-kubectl apply -f deploy/kubernetes/monitoring/grafana.yaml
-check_success
-
-sleep 5
-
-echo ""
-echo "Deploying behavior classification dashboard..."
-kubectl apply -f deploy/kubernetes/monitoring/behavior-dashboard.yaml
-check_success
-
-echo ""
-echo "Exposing Spark UI..."
-kubectl apply -f deploy/kubernetes/monitoring/spark-ui-service.yaml
-check_success
-
-echo ""
-echo "Waiting for monitoring stack to be ready..."
-kubectl wait --for=condition=ready pod -l app=prometheus --timeout=120s 2>/dev/null || echo "Prometheus starting..."
-kubectl wait --for=condition=ready pod -l app=grafana --timeout=120s 2>/dev/null || echo "Grafana starting..."
-
-echo ""
-echo "Monitoring stack status:"
-kubectl get pods | grep -E "prometheus|grafana|mongodb-exporter" || echo "Still initializing..."
-
-echo ""
-echo -e "${GREEN}✓ Monitoring stack deployed!${NC}"
-wait_for_user
-
-echo -e "${BLUE}=== PHASE 10: Setup Port-Forwards for Monitoring ===${NC}"
+echo -e "${BLUE}=== PHASE 10: Setup Port-Forwards for Spark UI ===${NC}"
 echo ""
 
 echo "Setting up port-forwards for local access..."
-echo "This allows you to access dashboards from your browser"
+echo "This allows you to access Spark UI from your browser"
 echo ""
 
 # Kill any existing port-forwards
-pkill -f "port-forward.*grafana" 2>/dev/null || true
-pkill -f "port-forward.*prometheus" 2>/dev/null || true
 pkill -f "port-forward.*spark" 2>/dev/null || true
 sleep 2
 
 # Start port-forwards in background
-echo "Starting Grafana port-forward (3000)..."
-kubectl port-forward svc/grafana 3000:3000 > /dev/null 2>&1 &
-GRAFANA_PID=$!
-
-echo "Starting Prometheus port-forward (9090)..."
-kubectl port-forward svc/prometheus 9090:9090 > /dev/null 2>&1 &
-PROMETHEUS_PID=$!
-
 echo "Starting Spark UI port-forward (4040)..."
 kubectl port-forward svc/spark-streaming-svc 4040:4040 > /dev/null 2>&1 &
 SPARK_UI_PID=$!
@@ -421,18 +369,14 @@ sleep 3
 echo ""
 echo -e "${GREEN}✓ Port-forwards active!${NC}"
 echo ""
-echo "Access your monitoring dashboards:"
-echo "  📊 Grafana:    http://localhost:3000 (admin/admin123)"
-echo "  📈 Prometheus: http://localhost:9090"
+echo "Access your Spark UI:"
 echo "  🎯 Spark UI:   http://localhost:4040"
 echo ""
-echo "Port-forward PIDs: Grafana=$GRAFANA_PID, Prometheus=$PROMETHEUS_PID, Spark=$SPARK_UI_PID"
+echo "Port-forward PID: Spark=$SPARK_UI_PID"
 echo ""
 
 # Save PIDs to file for later cleanup
-echo "$GRAFANA_PID" > /tmp/monitoring-pids.txt
-echo "$PROMETHEUS_PID" >> /tmp/monitoring-pids.txt
-echo "$SPARK_UI_PID" >> /tmp/monitoring-pids.txt
+echo "$SPARK_UI_PID" > /tmp/monitoring-pids.txt
 
 wait_for_user
 
@@ -455,7 +399,94 @@ echo ""
 
 wait_for_user
 
-echo -e "${BLUE}=== PHASE 12: Verify Deployment ===${NC}"
+echo -e "${BLUE}=== PHASE 11: Deploy Monitoring Stack ===${NC}"
+echo ""
+
+# Add Helm repositories
+echo "Adding Helm repositories..."
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
+helm repo update
+check_success
+
+# Check if Prometheus stack is already installed
+if helm list | grep -q "prometheus"; then
+    echo -e "${GREEN}✓${NC} Prometheus stack is already installed"
+else
+    echo ""
+    echo "Installing Prometheus & Grafana stack..."
+    echo "This includes Prometheus, Grafana, and Alertmanager"
+    helm install prometheus prometheus-community/kube-prometheus-stack
+    check_success
+fi
+
+echo ""
+echo "Waiting for Prometheus pods to be ready (this may take 2-3 minutes)..."
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=grafana --timeout=300s 2>/dev/null || echo "Still starting..."
+
+# Check if MongoDB exporter is already installed
+if helm list | grep -q "mongo-exporter"; then
+    echo -e "${GREEN}✓${NC} MongoDB exporter is already installed"
+else
+    echo ""
+    echo "Installing MongoDB exporter..."
+    helm install mongo-exporter prometheus-community/prometheus-mongodb-exporter \
+      -f ./deploy/kubernetes/base/mongo-exporter-values.yaml
+    check_success
+fi
+
+echo ""
+echo "Upgrading Prometheus with custom Grafana configuration..."
+helm upgrade prometheus prometheus-community/kube-prometheus-stack -f config/grafana-values.yaml
+check_success
+
+echo ""
+echo "Getting Grafana admin password..."
+GRAFANA_PASSWORD=$(kubectl --namespace default get secrets prometheus-grafana -o jsonpath="{.data.admin-password}" | base64 -d)
+echo -e "Grafana Password: ${GREEN}$GRAFANA_PASSWORD${NC}"
+
+echo ""
+echo "Setting up Grafana port-forward (3000)..."
+pkill -f "port-forward.*grafana" 2>/dev/null || true
+sleep 2
+kubectl port-forward svc/prometheus-grafana 3000:80 > /dev/null 2>&1 &
+GRAFANA_PID=$!
+echo "Grafana port-forward PID: $GRAFANA_PID"
+
+echo ""
+echo -e "${GREEN}✓ Monitoring stack deployed!${NC}"
+echo "  🔹 Grafana: http://localhost:3000 (admin/$GRAFANA_PASSWORD)"
+echo "  🔹 Prometheus: Available via Grafana"
+echo "  🔹 MongoDB Exporter: Collecting metrics"
+
+wait_for_user
+
+echo -e "${BLUE}=== PHASE 12: Deploy Metabase ===${NC}"
+echo ""
+
+echo "Deploying Metabase for business intelligence..."
+kubectl apply -f deploy/kubernetes/base/metabase.yaml
+check_success
+
+echo ""
+echo "Waiting for Metabase pod to be ready (this may take 2-3 minutes)..."
+kubectl wait --for=condition=ready pod -l app=metabase --timeout=300s 2>/dev/null || echo "Still starting..."
+
+echo ""
+echo "Setting up Metabase port-forward (3001)..."
+pkill -f "port-forward.*metabase" 2>/dev/null || true
+sleep 2
+kubectl port-forward svc/metabase-service 3001:3000 > /dev/null 2>&1 &
+METABASE_PID=$!
+echo "Metabase port-forward PID: $METABASE_PID"
+
+echo ""
+echo -e "${GREEN}✓ Metabase deployed!${NC}"
+echo "  🔹 Metabase UI: http://localhost:3001"
+echo "  🔹 Connect to MongoDB: mongodb://my-mongo-mongodb.default.svc.cluster.local:27017"
+
+wait_for_user
+
+echo -e "${BLUE}=== PHASE 13: Verify Deployment ===${NC}"
 echo ""
 
 echo "Running validation checks..."
@@ -465,20 +496,32 @@ echo ""
 echo "Checking all components..."
 echo ""
 
-echo "MongoDB:"
-kubectl get pods | grep mongo
+echo "1. MongoDB:"
+kubectl get pods | grep mongo || echo "  No MongoDB pods found!"
 echo ""
 
-echo "Kafka:"
-kubectl get pods | grep kafka
+echo "2. Kafka:"
+kubectl get pods | grep kafka || echo "  No Kafka pods found!"
 echo ""
 
-echo "Spark:"
-kubectl get pods | grep spark
+echo "3. Spark:"
+kubectl get pods | grep spark || echo "  No Spark pods found!"
 echo ""
 
-echo "Monitoring:"
-kubectl get pods | grep -E "prometheus|grafana" || echo "Monitoring pods still starting..."
+echo "4. Monitoring (Prometheus/Grafana):"
+kubectl get pods | grep -E "prometheus|grafana" || echo "  No monitoring pods found!"
+echo ""
+
+echo "5. Metabase:"
+kubectl get pods | grep metabase || echo "  No Metabase pods found!"
+echo ""
+
+echo "6. Services:"
+kubectl get svc | grep -E "mongo|kafka|spark|grafana|metabase" || echo "  No services found!"
+echo ""
+
+echo "7. Port-forwards active:"
+ps aux | grep -E "port-forward.*(3000|3001|4040)" | grep -v grep || echo "  No port-forwards active"
 echo ""
 
 echo ""
@@ -492,19 +535,19 @@ echo -e "═══════════════════════�
 echo ""
 echo -e "${GREEN}✅ All components deployed successfully!${NC}"
 echo ""
-echo "📊 ${YELLOW}MONITORING DASHBOARDS (Already Port-Forwarded):${NC}"
+echo "📊 ${YELLOW}ACCESS DASHBOARDS:${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "  🎯 ${GREEN}Grafana Dashboard:${NC}    http://localhost:3000"
-echo "     Username: admin"
-echo "     Password: admin123"
-echo "     → Pre-configured User Behavior Classification dashboard"
 echo ""
 echo "  📈 ${GREEN}Spark UI:${NC}             http://localhost:4040"
 echo "     → View streaming job status, DAG visualization, metrics"
 echo ""
-echo "  📊 ${GREEN}Prometheus:${NC}           http://localhost:9090"
-echo "     → Query raw metrics and create custom dashboards"
+echo "  📊 ${GREEN}Grafana:${NC}              http://localhost:3000"
+echo "     → Username: admin | Password: $GRAFANA_PASSWORD"
+echo "     → MongoDB metrics, system monitoring, custom dashboards"
+echo ""
+echo "  💼 ${GREEN}Metabase:${NC}             http://localhost:3001"
+echo "     → Business intelligence and data exploration"
+echo "     → MongoDB: mongodb://my-mongo-mongodb.default.svc.cluster.local:27017"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
@@ -535,9 +578,9 @@ echo ""
 echo "  ✓ Kafka Cluster (events streaming)"
 echo "  ✓ MongoDB (data storage)"
 echo "  ✓ Spark Streaming (behavior classification)"
-echo "  ✓ Prometheus (metrics collection)"
-echo "  ✓ Grafana (visualization dashboards)"
-echo "  ✓ MongoDB Exporter (database metrics)"
+echo "  ✓ Prometheus + Grafana (monitoring & visualization)"
+echo "  ✓ MongoDB Exporter (metrics collection)"
+echo "  ✓ Metabase (business intelligence)"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
@@ -566,7 +609,10 @@ echo "🛑 ${YELLOW}TO STOP PORT-FORWARDS:${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "  ${GREEN}pkill -f 'port-forward'${NC}"
-echo "  Or kill specific PIDs: ${GREEN}kill $GRAFANA_PID $PROMETHEUS_PID $SPARK_UI_PID${NC}"
+echo "  Or kill specific PIDs:"
+echo "    Spark UI:  ${GREEN}kill $SPARK_UI_PID${NC}"
+echo "    Grafana:   ${GREEN}kill $GRAFANA_PID${NC}"
+echo "    Metabase:  ${GREEN}kill $METABASE_PID${NC}"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""

@@ -1,12 +1,17 @@
 """
-Simple Streaming Job for Testing
-=================================
-Reads events from Kafka and writes directly to MongoDB.
-No complex processing - just for testing the data pipeline.
+Direct Streaming Job - Kafka to MongoDB
+=======================================
+Streamlines the pipeline to purely read from Kafka and write to MongoDB.
+Features:
+- Strict Schema Validation
+- Error Logging (via console)
+- Throughput Monitoring (via progress reporting)
 """
 
+import time
+import json
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, from_json, current_timestamp
+from pyspark.sql.functions import col, from_json, current_timestamp, to_timestamp, lit
 from app.utils.spark_factory import SparkSessionFactory
 from app.connectors.kafka_connector import KafkaConnector
 from app.connectors.mongodb_connector import MongoDBConnector
@@ -16,14 +21,15 @@ from app.config.kafka_config import KafkaConfig
 from app.config.mongodb_config import MongoDBConfig
 
 
-class SimpleStreamingJob:
-    """Simple streaming job - read from Kafka, write to MongoDB"""
+class DirectStreamingJob:
+    """Robust direct streaming job - Kafka → MongoDB"""
     
     def __init__(self):
         # Create Spark session
         self.spark = SparkSessionFactory.create_streaming_session(
-            "SimpleStreamingTest"
+            "DirectStreamingPipeline"
         )
+        self.spark.sparkContext.setLogLevel("WARN")
         
         # Initialize configurations
         self.kafka_config = KafkaConfig(
@@ -41,51 +47,84 @@ class SimpleStreamingJob:
         self.mongo_connector = MongoDBConnector(self.spark, self.mongo_config)
         
     def run(self):
-        """Execute the simple streaming pipeline"""
+        """Execute the direct streaming pipeline"""
         print("=" * 80)
-        print("🚀 Starting Simple Streaming Job (Testing)")
+        print("🚀 Starting Direct Streaming Pipeline")
+        print("=" * 80)
+        print(f"📥 Source: Kafka topic '{self.kafka_config.topic}'")
+        print("💾 Destination: MongoDB collection 'raw_events'")
+        print("🛡️  Validation: Strict Schema Check")
+        print("📊 Monitoring: Throughput logs enabled")
         print("=" * 80)
         
         # Step 1: Read from Kafka
         df_kafka = self.kafka_connector.read_stream()
-        print("✓ Connected to Kafka topic:", self.kafka_config.topic)
+        print("\n✓ Connected to Kafka")
         
-        # Step 2: Parse Kafka events
+        # Step 2: Schema Validation & Parsing
+        # Parse JSON and enforce schema. Malformed records become NULL.
         event_schema = EventSchema.get_kafka_event_schema()
+        
         df_parsed = df_kafka.select(
-            from_json(col("value").cast("string"), event_schema).alias("event"),
-            current_timestamp().alias("processing_time")
-        ).select("event.*", "processing_time")
+            from_json(
+                col("value").cast("string"), 
+                event_schema, 
+                options={"mode": "PERMISSIVE"}  # Allows capturing nulls for counting
+            ).alias("data"),
+            col("timestamp").alias("kafka_timestamp")
+        )
         
-        print("✓ Event parsing configured")
-        
+        # Filter valid records
+        df_valid = df_parsed.filter(col("data").isNotNull()) \
+            .select("data.*", "kafka_timestamp")
+            
+        # Add processing metadata
+        df_final = df_valid.withColumn(
+            "processing_time", current_timestamp()
+        ).withColumn(
+            "event_timestamp", 
+            to_timestamp(col("event_time"), "yyyy-MM-dd HH:mm:ss z")
+        )
+
         # Step 3: Write to MongoDB
+        print("✓ Schema Validation configured")
+        
         query = self.mongo_connector.write_stream(
-            df_parsed,
+            df_final,
             collection="raw_events",
             checkpoint_location=settings.get_checkpoint_path("raw_events"),
             output_mode="append"
         )
         
         print("\n" + "=" * 80)
-        print("✅ Streaming query started successfully!")
+        print("✅ Pipeline started!")
         print("=" * 80)
-        print("\n📈 Monitoring stream... (Press Ctrl+C to stop)")
-        print(f"\nWriting to MongoDB collection: raw_events")
-        print("\n" + "=" * 80)
         
-        # Wait for stream
+        # Step 4: Monitor Throughput
         try:
-            query.awaitTermination()
+            while query.isActive:
+                progress = query.lastProgress
+                if progress:
+                    batch_id = progress['batchId']
+                    num_rows = progress['numInputRows']
+                    rate = progress['processedRowsPerSecond']
+                    
+                    if num_rows > 0:
+                        print(f"[{time.strftime('%H:%M:%S')}] Batch {batch_id}: "
+                              f"Processed {num_rows} records at {rate:.2f} rows/sec")
+                
+                time.sleep(10)
+                
         except KeyboardInterrupt:
-            print("\n\n⏹️  Stopping streaming query...")
+            print("\n⏹️  Stopping pipeline...")
+            query.stop()
             self.spark.stop()
-            print("✅ Graceful shutdown complete")
+            print("✅ Shutdown complete")
 
 
 def main():
     """Main entry point"""
-    job = SimpleStreamingJob()
+    job = DirectStreamingJob()
     job.run()
 
 
