@@ -1,4 +1,5 @@
 import os
+from pymongo import MongoClient
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import from_json, col, current_timestamp
@@ -18,7 +19,7 @@ KAFKA_TOPIC = os.getenv('KAFKA_TOPIC', 'customer_events')
 MONGO_URI = os.getenv('MONGODB_URI', 'mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/')
 MONGO_DB_NAME = os.getenv('MONGODB_DATABASE', 'bigdata_db')
 MONGO_COLLECTION_NAME = "customer_events"
-
+SPARK_CHECKPOINT_DIR = os.getenv('SPARK_CHECKPOINT_DIR', './checkpoints')#Thêm 
 
 def main():
     print("Khởi tạo Spark Session...")
@@ -80,22 +81,55 @@ def main():
     # Dùng 'foreachBatch' là cách linh hoạt nhất
     def write_to_mongo(batch_df, epoch_id):
         print(f"--- Đang ghi Epoch {epoch_id} ---")
-        if batch_df.count() > 0:
-            batch_df.write \
-                .format("mongodb") \
-                .mode("append") \
-                .option("uri", MONGO_URI) \
-                .option("database", MONGO_DB_NAME) \
-                .option("collection", MONGO_COLLECTION_NAME) \
-                .save()
-            print(f"--- Đã ghi {batch_df.count()} dòng vào MongoDB ---")
-        else:
+        if batch_df.count() == 0:
             print("--- Không có dữ liệu mới trong epoch này ---")
+            return
+
+        # 1. Ghi toàn bộ event vào MongoDB collection 'customer_events'
+        batch_df.write \
+            .format("mongodb") \
+            .mode("append") \
+            .option("uri", MONGO_URI) \
+            .option("database", MONGO_DB_NAME) \
+            .option("collection", MONGO_COLLECTION_NAME) \
+            .save()
+
+        print(f"--- Đã ghi {batch_df.count()} dòng vào collection 'customer_events' ---")
+
+        # 2. Lưu unique sản phẩm vào 'product_catalog'
+        try:
+            # Chuyển batch_df thành Pandas để duyệt
+            pdf = batch_df.select("product_id", "category_id", "brand", "price").distinct().toPandas()
+
+            client = MongoClient(MONGO_URI)
+            catalog_col = client[MONGO_DB_NAME]["product_catalog"]
+
+            for _, row in pdf.iterrows():
+                product_id = int(row["product_id"])
+                name = f"Product {product_id}"
+                img = f"https://via.placeholder.com/300x300/FF6B6B/FFFFFF?text=Product+{product_id}"
+
+                catalog_col.update_one(
+                    {"product_id": product_id},
+                    {"$setOnInsert": {
+                        "product_id": product_id,
+                        "product_name": name,
+                        "category_id": int(row["category_id"]),
+                        "brand": row["brand"],
+                        "price": float(row["price"]),
+                        "image_url": img
+                    }},
+                    upsert=True
+                )
+            print(f"✓ Đã cập nhật product_catalog với {len(pdf)} sản phẩm")
+        except Exception as e:
+            print(f"⚠ Lỗi khi cập nhật product_catalog: {e}")
+
 
     query = df_with_watermark.writeStream \
         .foreachBatch(write_to_mongo) \
         .outputMode("update") \
-        .option("checkpointLocation", "/opt/spark/work-dir/checkpoints") \
+        .option("checkpointLocation", SPARK_CHECKPOINT_DIR) \
         .trigger(processingTime="15 seconds") \
         .start()
 

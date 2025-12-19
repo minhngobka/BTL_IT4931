@@ -94,7 +94,7 @@ def load_dimension_tables(spark):
     df_products = spark.read \
         .schema(product_schema) \
         .option("header", "true") \
-        .csv("/opt/spark/work-dir/data/catalog/product_catalog.csv")
+        .csv("data/catalog/product_catalog.csv")
     
     # Broadcast hint for small dimension table
     #df_products = df_products.hint("broadcast")
@@ -114,7 +114,7 @@ def load_dimension_tables(spark):
         df_users = spark.read \
             .schema(user_schema) \
             .option("header", "true") \
-            .csv("/opt/spark/work-dir/user_dimension.csv")
+            .csv("data/catalog/user_dimension.csv")
         
         #df_users = df_users.hint("broadcast")
         df_users = broadcast(df_users)

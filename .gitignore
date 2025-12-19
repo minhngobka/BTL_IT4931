@@ -48,8 +48,48 @@ Thumbs.db
 *.bak
 note.txt
 
+# ML Models (large binary files)
+models/
+*.pkl
+*.joblib
+*.h5
+*.model
+
+# Checkpoint directories (Spark)
+checkpoints/
+./checkpoints
+
+# MongoDB backup & data
+mongo_backup/
+*.mongodump
+data/mongo_data/
+
+# Docker volumes
+docker_volumes/
+.docker/
+
 # Kubernetes secrets (if any)
 kubernetes/secrets/
 
 # Documentation backup
 docs_backup/
+
+# Generated data files (dimension tables)
+data/catalog/product_catalog.csv
+data/catalog/user_dimension.csv
+data/catalog/category_hierarchy.csv
+
+# Cache files
+.cache/
+*.cache
+.pytest_cache/
+
+# Testing
+.coverage
+htmlcov/
+
+# Misc
+.DS_Store
+*.egg-info
+dist/
+build/

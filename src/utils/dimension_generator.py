@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import random
 
 
-def generate_user_dimension(num_users=10000, csv_file_path='2019-Oct.csv'):
+def generate_user_dimension(num_users=10000, csv_file_path='../../data/raw/ecommerce_events_2019_oct.csv'):
     """
     Generate user dimension table with demographics and segmentation
     """
@@ -81,109 +81,80 @@ def generate_user_dimension(num_users=10000, csv_file_path='2019-Oct.csv'):
     return df_users
 
 
-def generate_enhanced_product_catalog(csv_file_path='2019-Oct.csv'):
+def generate_product_catalog(csv_file_path='../../data/raw/ecommerce_events_2019_oct.csv'):
     """
-    Generate enhanced product catalog with hierarchy and attributes
+    Generate product_catalog.csv từ dữ liệu event gốc
+    Đảm bảo: có price, product_name, image_url
     """
-    print("\nGenerating enhanced product catalog...")
-    
-    try:
-        # Read actual product data from events
-        df_events = pd.read_csv(csv_file_path, nrows=500000)
-        
-        # Get unique products with their basic info
-        df_products = df_events[['product_id', 'category_id', 'brand', 'price']].drop_duplicates('product_id')
-        
-        # Parse category codes if available
-        if 'category_code' in df_events.columns:
-            df_events['category_code'] = df_events['category_code'].fillna('unknown')
-            
-            # Extract category hierarchy
-            df_events['main_category'] = df_events['category_code'].apply(
-                lambda x: x.split('.')[0] if isinstance(x, str) and '.' in x else 'uncategorized'
-            )
-            df_events['subcategory'] = df_events['category_code'].apply(
-                lambda x: x.split('.')[1] if isinstance(x, str) and '.' in x and len(x.split('.')) > 1 else ''
-            )
-            
-            # Join with products
-            category_map = df_events[['product_id', 'category_code', 'main_category', 'subcategory']].drop_duplicates('product_id')
-            df_products = df_products.merge(category_map, on='product_id', how='left')
-        else:
-            df_products['category_code'] = 'electronics.smartphone'
-            df_products['main_category'] = 'electronics'
-            df_products['subcategory'] = 'smartphone'
-        
-        # Generate product names based on category
-        def generate_product_name(row):
-            category = row.get('main_category', 'product')
-            brand = row.get('brand', 'Generic')
-            if pd.isna(brand):
-                brand = 'Generic'
-            return f"{brand} {category.title()} Model {random.randint(100, 999)}"
-        
-        df_products['product_name'] = df_products.apply(generate_product_name, axis=1)
-        df_products['category_name'] = df_products['main_category'].apply(lambda x: x.title() if pd.notna(x) else 'Uncategorized')
-        
-        # Add additional attributes
-        df_products['rating'] = np.random.uniform(3.0, 5.0, len(df_products)).round(1)
-        df_products['num_reviews'] = np.random.randint(0, 1000, len(df_products))
-        df_products['in_stock'] = np.random.choice([True, False], len(df_products), p=[0.85, 0.15])
-        df_products['discount_percent'] = np.random.choice([0, 5, 10, 15, 20, 25], len(df_products), 
-                                                           p=[0.5, 0.2, 0.15, 0.1, 0.03, 0.02])
-        
-        # Calculate discounted price
-        df_products['original_price'] = df_products['price']
-        df_products['discount_amount'] = (df_products['original_price'] * df_products['discount_percent'] / 100).round(2)
-        df_products['final_price'] = (df_products['original_price'] - df_products['discount_amount']).round(2)
-        
-        # Clean up
-        df_products = df_products.fillna({
-            'brand': 'Generic',
-            'category_code': 'unknown',
-            'subcategory': '',
-            'category_name': 'Uncategorized'
-        })
-        
-        # Select final columns
-        output_columns = [
-            'product_id', 'product_name', 'brand', 'category_id', 'category_name',
-            'category_code', 'subcategory', 'original_price', 'discount_percent',
-            'final_price', 'rating', 'num_reviews', 'in_stock'
-        ]
-        
-        df_products = df_products[output_columns]
-        
-        output_file = 'product_catalog.csv'
-        df_products.to_csv(output_file, index=False)
-        print(f"✓ Product catalog saved to {output_file}")
-        print(f"  Rows: {len(df_products)}")
-        print(f"  Columns: {list(df_products.columns)}")
-        print(f"\nSample data:")
-        print(df_products.head())
-        
-        return df_products
-        
-    except Exception as e:
-        print(f"Error generating product catalog: {e}")
-        print("Creating minimal product catalog...")
-        
-        # Fallback: create minimal catalog
-        products = []
-        for i in range(1000):
-            products.append({
-                'product_id': i + 1,
-                'product_name': f"Product {i+1}",
-                'category_name': np.random.choice(['Electronics', 'Clothing', 'Home', 'Sports']),
-                'category_code': 'electronics.smartphone',
-                'subcategory': 'smartphone'
-            })
-        
-        df_products = pd.DataFrame(products)
-        df_products.to_csv('product_catalog.csv', index=False)
-        print(f"✓ Minimal product catalog created")
-        return df_products
+    print("\n📦 Generating product_catalog.csv ...")
 
+    # Đọc dữ liệu gốc
+    df = pd.read_csv(csv_file_path, usecols=[
+        'product_id', 'category_id', 'category_code', 'brand', 'price'
+    ])
+
+    # Loại bỏ event không có product_id hoặc price
+    df = df.dropna(subset=['product_id', 'price'])
+
+    # Ép kiểu
+    df['product_id'] = df['product_id'].astype(int)
+    df['price'] = df['price'].astype(float)
+
+    # === 1. Gom theo product_id ===
+    product_df = df.groupby('product_id').agg({
+        'category_id': 'first',
+        'category_code': 'first',
+        'brand': 'first',
+        'price': 'median'   # lấy giá trung vị → ổn định
+    }).reset_index()
+
+    # === 2. Xử lý category ===
+    def extract_category_name(code):
+        if isinstance(code, str) and '.' in code:
+            return code.split('.')[0].capitalize()
+        return 'Unknown'
+
+    product_df['category_name'] = product_df['category_code'].apply(extract_category_name)
+
+    # === 3. Sinh product_name ===
+    def build_product_name(row):
+        brand = row['brand'] if pd.notna(row['brand']) else 'Generic'
+        category = row['category_name']
+        model = random.randint(100, 999)
+        return f"{brand} {category} Model {model}"
+
+    product_df['product_name'] = product_df.apply(build_product_name, axis=1)
+
+    # === 4. Sinh image_url ===
+    product_df['image_url'] = product_df['product_id'].apply(
+        lambda pid: f"https://via.placeholder.com/300x300.png?text=Product+{pid}"
+    )
+
+    # === 5. Làm tròn giá ===
+    product_df['price'] = product_df['price'].round(0)
+
+    # === 6. Chọn cột cuối ===
+    product_df = product_df[[
+        'product_id',
+        'product_name',
+        'brand',
+        'category_id',
+        'category_name',
+        'category_code',
+        'price',
+        'image_url'
+    ]]
+
+    # === 7. Xuất CSV ===
+    output_file = 'product_catalog.csv'
+    product_df.to_csv(output_file, index=False)
+
+    print(f"✅ product_catalog.csv created")
+    print(f"   • Products: {len(product_df)}")
+    print("\n📋 Sample:")
+    print(product_df.head())
+
+    return product_df
 
 def generate_category_hierarchy():
     """
@@ -240,7 +211,7 @@ def generate_category_hierarchy():
     return df_categories
 
 
-def generate_all_dimensions(csv_file_path='2019-Oct.csv'):
+def generate_all_dimensions(csv_file_path='../../data/raw/ecommerce_events_2019_oct.csv'):
     """
     Generate all dimension tables
     """
@@ -251,7 +222,7 @@ def generate_all_dimensions(csv_file_path='2019-Oct.csv'):
     
     # Generate dimensions
     df_users = generate_user_dimension(num_users=5000, csv_file_path=csv_file_path)
-    df_products = generate_enhanced_product_catalog(csv_file_path=csv_file_path)
+    df_products = generate_product_catalog(csv_file_path=csv_file_path)
     df_categories = generate_category_hierarchy()
     
     print("\n" + "=" * 80)
