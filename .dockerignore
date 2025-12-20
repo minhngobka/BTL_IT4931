@@ -42,7 +42,6 @@ logs/
 
 # Data (exclude large files)
 data/raw/*.csv
-data/catalog/*.csv
 # Environment
 .env
 *.env

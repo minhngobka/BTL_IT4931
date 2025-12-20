@@ -26,7 +26,7 @@ config/.env
 data/raw/*.csv
 data/processed/
 *.csv
-!data/catalog/*.csv
+data/catalog/*.csv
 
 # IDE
 .vscode/

@@ -70,7 +70,7 @@ def generate_user_dimension(num_users=10000, csv_file_path='2019-Oct.csv'):
         })
     
     df_users = pd.DataFrame(users)
-    output_file = os.getcwd() + '/data/cata/log/user_dimension.csv'
+    output_file = os.getcwd() + '/data/catalog/user_dimension.csv'
     df_users.to_csv(output_file, index=False)
     print(f"✓ User dimension saved to {output_file}")
     print(f"  Rows: {len(df_users)}")
