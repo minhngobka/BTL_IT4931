@@ -1,0 +1,7 @@
+mongodb:
+  uri: "mongodb://my-mongo-mongodb.default.svc.cluster.local:27017"
+
+serviceMonitor:
+  enabled: false
+  additionalLabels:
+    release: prometheus

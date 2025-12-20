@@ -10,14 +10,23 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.tox/
 
 # Environment variables
 .env
 config/.env
+*.env
+!.env.example
 
 # Data files (large CSV)
 data/raw/*.csv
+data/processed/
 *.csv
+data/catalog/*.csv
 
 # IDE
 .vscode/
@@ -25,31 +34,48 @@ data/raw/*.csv
 *.swp
 *.swo
 *~
+.project
+.pydevproject
+.settings/
 
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb
+notebooks/*.ipynb
 
 # Spark
 spark-warehouse/
 derby.log
 metastore_db/
+checkpoints/
 
 # Logs
 *.log
 logs/
+*.out
 
 # OS
 .DS_Store
 Thumbs.db
+.Trash-*/
 
 # Temporary files
 *.tmp
 *.bak
 note.txt
+temp/
+tmp/
 
 # Kubernetes secrets (if any)
 kubernetes/secrets/
+deploy/kubernetes/overlays/prod/secrets/
 
 # Documentation backup
 docs_backup/
+
+# Old source structure (keeping for reference temporarily)
+# src/
+
+# Database dumps
+*.dump
+*.sql

@@ -1,0 +1,66 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+venv/
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.tox/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Tests
+tests/
+
+# Logs
+logs/
+*.log
+
+# Data (exclude large files)
+data/raw/*.csv
+# Environment
+.env
+*.env
+!.env.example
+
+# Notebooks
+notebooks/
+*.ipynb
+
+# Deployment (don't include in image)
+deploy/kubernetes/
+deploy/scripts/
+
+# Temporary
+*.tmp
+*.bak
+temp/
+tmp/
+
+# OS
+.DS_Store
+Thumbs.db
