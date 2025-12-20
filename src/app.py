@@ -6,6 +6,17 @@ import math
 
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
 
+@app.route('/product/<product_id>')
+def product_detail(product_id):
+    # Tìm thông tin sản phẩm theo ID
+    product = recommender.db.product_catalog.find_one({'product_id': str(product_id)})
+    if not product:
+        return render_template('404.html'), 404
+
+    product['_id'] = str(product['_id'])  # nếu cần hiển thị
+
+    return render_template('product_detail.html', product=product)
+
 @app.route('/')
 def index():
     """Trang chính"""

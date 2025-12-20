@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.product_name }} - E-Commerce</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='product_detail.css') }}">
+</head>
+<body>
+    <!-- Header giống index.html -->
+    <header class="main-header">
+        <div class="top-bar">
+            <div class="left-links">
+                <a href="#">Kênh Người Bán</a>
+                <a href="#">Trở thành Người bán</a>
+                <a href="#">Tải ứng dụng</a>
+                <a href="#">Kết nối</a>
+            </div>
+            <div class="right-links">
+                <a href="#">Thông Báo</a>
+                <a href="#">Hỗ Trợ</a>
+                <a href="#">Tiếng Việt</a>
+                <a href="#">Đăng Ký</a>
+                <a href="#">Đăng Nhập</a>
+            </div>
+        </div>
+
+        <div class="main-bar">
+            <div class="logo"><a href="/">MyShop</a></div>
+            <div class="search-bar">
+                <input type="text" placeholder="Tìm sản phẩm...">
+                <button>Tìm kiếm</button>
+            </div>
+            <div class="cart-icon">Giỏ hàng</div>
+        </div>
+
+        <nav class="quick-links">
+            <a href="#">Áo Khoác</a>
+            <a href="#">Giày Dép</a>
+            <a href="#">Máy Tính</a>
+            <a href="#">Điện Thoại</a>
+            <a href="#">Mũ Nón</a>
+            <a href="#">Phụ Kiện</a>
+        </nav>
+    </header>
+
+    <!-- Nội dung sản phẩm chi tiết -->
+    <div class="container">
+        <main>
+            <div class="product-detail-layout">
+                <!-- Chi tiết sản phẩm -->
+                <section class="product-info">
+                    <h2>{{ product.product_name }}</h2>
+                    <div class="detail-image">
+                        <img src="{{ product.image_url }}" alt="{{ product.product_name }}">
+                    </div>
+                    <div class="product-details">
+                        <p><strong>Mã sản phẩm:</strong> {{ product.product_id }}</p>
+                        <p><strong>Thương hiệu:</strong> {{ product.brand }}</p>
+                        <p><strong>Danh mục:</strong> {{ product.category_name }}</p>
+                        <p><strong>Giá:</strong> <span class="price">{{ "%.0f"|format(product.price|float) }}₫</span></p>
+                    </div>
+                    <button class="btn-add-cart" onclick="addToCart()">Thêm vào giỏ</button>
+                </section>
+
+                <!-- Gợi ý -->
+                <section class="recommendations">
+                    <h3>Sản Phẩm Liên Quan</h3>
+                    <div id="recommendationsList" class="recommendations-grid">
+                        <p class="loading">Đang tải...</p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Script như cũ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const productId = {{ product.product_id | tojson }};
+            loadRecommendations(productId);
+        });
+
+        async function loadRecommendations(productId) {
+            try {
+                const response = await fetch('/api/recommend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ product_id: productId })
+                });
+
+                const data = await response.json();
+                displayRecommendations(data.recommendations);
+            } catch (error) {
+                console.error('Lỗi tải gợi ý:', error);
+                document.getElementById('recommendationsList').innerHTML =
+                    '<p class="error">Không thể tải gợi ý sản phẩm</p>';
+            }
+        }
+
+        function displayRecommendations(recommendations) {
+            const container = document.getElementById('recommendationsList');
+            if (!recommendations || recommendations.length === 0) {
+                container.innerHTML = '<p class="empty">Không có sản phẩm được gợi ý</p>';
+                return;
+            }
+
+            container.innerHTML = recommendations.map(rec => `
+                <div class="recommendation-card">
+                    <img src="${rec.image_url || 'https://via.placeholder.com/200'}" alt="${rec.product_name}">
+                    <div class="product-name">${rec.product_name}</div>
+                    <div class="product-price">${(rec.price || 0).toLocaleString()}₫</div>
+                    <button class="btn-view" onclick="viewProduct(${rec.product_id})">Xem chi tiết</button>
+                </div>
+            `).join('');
+        }
+
+        function viewProduct(productId) {
+            window.location.href = `/product/${productId}`;
+        }
+
+        function addToCart() {
+            alert('Thêm vào giỏ hàng thành công!');
+        }
+    </script>
+</body>
+</html>

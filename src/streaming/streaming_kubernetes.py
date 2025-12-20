@@ -1,59 +1,67 @@
 import os
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession
-# Đảm bảo bạn đã import 'window'
-from pyspark.sql.functions import from_json, col, current_timestamp, window
+from pyspark.sql.functions import from_json, col, current_timestamp, window, count
 from pyspark.sql.types import StructType, StructField, StringType, LongType, DoubleType, TimestampType
 
 # Load environment variables from config/.env
 env_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config', '.env')
 load_dotenv(dotenv_path=env_path)
 
-# --- Cấu hình ---
-
-# 1. Thông tin Kafka (Đọc từ .env hoặc mặc định)
-KAFKA_BOOTSTRAP_SERVER = os.getenv('KAFKA_INTERNAL_BROKER', 'my-cluster-kafka-bootstrap.default.svc.cluster.local:9092')
+# --- Configuration ---
+KAFKA_BOOTSTRAP_SERVER = os.getenv('KAFKA_INTERNAL_BROKER', 'localhost:9092')
 KAFKA_TOPIC = os.getenv('KAFKA_TOPIC', 'customer_events')
-
-# 2. Thông tin MongoDB (Đọc từ .env hoặc mặc định)
-MONGO_URI = os.getenv('MONGODB_URI', 'mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/')
+MONGO_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
 MONGO_DB_NAME = os.getenv('MONGODB_DATABASE', 'bigdata_db')
-# Chúng ta sẽ ghi vào một collection mới
-MONGO_COLLECTION_NAME = "event_counts_by_category" 
+MONGO_COLLECTION_NAME = "event_counts_by_category"
+HDFS_NAMENODE = os.getenv('HDFS_NAMENODE', 'hdfs://localhost:9000')
 
+def load_product_catalog(spark):
+    """Load product catalog from HDFS or local"""
+    hdfs_path = f"{HDFS_NAMENODE}/data/catalog/product_catalog.csv"
+    local_path = "data/catalog/product_catalog.csv"
+    
+    try:
+        print(f"📖 Loading product catalog from HDFS: {hdfs_path}")
+        df = spark.read \
+            .option("header", "true") \
+            .option("inferSchema", "true") \
+            .csv(hdfs_path)
+        print(f"✅ Loaded {df.count()} products from HDFS")
+        return df
+    except Exception as e:
+        print(f"⚠️  HDFS load failed: {e}")
+        try:
+            print(f"⏮️  Falling back to local: {local_path}")
+            df = spark.read \
+                .option("header", "true") \
+                .option("inferSchema", "true") \
+                .csv(local_path)
+            print(f"✅ Loaded {df.count()} products from local")
+            return df
+        except Exception as e2:
+            print(f"❌ Failed to load product catalog: {e2}")
+            return None
 
 def main():
-    print("Khởi tạo Spark Session...")
+    print("🚀 Initializing Spark Session...")
     
     spark = SparkSession.builder \
-        .appName("CustomerJourneyStreaming") \
+        .appName("CustomerJourneyStreamingK8s") \
         .master("local[*]") \
         .config("spark.mongodb.write.connection.uri", MONGO_URI) \
         .config("spark.mongodb.write.database", MONGO_DB_NAME) \
         .config("spark.mongodb.write.collection", MONGO_COLLECTION_NAME) \
+        .config("spark.hadoop.fs.defaultFS", HDFS_NAMENODE) \
         .getOrCreate()
 
     spark.sparkContext.setLogLevel("WARN")
-    print("Spark Session đã sẵn sàng.")
+    print("✅ Spark Session ready")
 
-    # --- BƯỚC MỚI: ĐỌC DỮ LIỆU STATIC (STATIC DATAFRAME) ---
-    print("Đang đọc dữ liệu catalog sản phẩm từ /opt/spark/work-dir/product_catalog.csv ...")
-    catalog_schema = StructType([
-        StructField("product_id", LongType()),
-        StructField("product_name", StringType()),
-        StructField("category_name", StringType())
-    ])
-    
-    df_product_catalog = spark.read \
-        .schema(catalog_schema) \
-        .option("header", "true") \
-        .csv("/opt/spark/work-dir/product_catalog.csv")
-    
-    # df_product_catalog.show() # Debug
-    print("Đã đọc xong catalog. Bắt đầu đọc luồng Kafka...")
-    # --- KẾT THÚC BƯỚC MỚI ---
+    # Load product catalog
+    df_product_catalog = load_product_catalog(spark)
 
-    # 1. Đọc luồng (Read Stream) từ Kafka
+    # 1. Read stream from Kafka
     df_kafka = spark.readStream \
         .format("kafka") \
         .option("kafka.bootstrap.servers", KAFKA_BOOTSTRAP_SERVER) \
@@ -61,7 +69,7 @@ def main():
         .option("startingOffsets", "latest") \
         .load()
 
-    # 2. Định nghĩa Schema (Cấu trúc) cho dữ liệu JSON
+    # 2. Define schema
     schema = StructType([
         StructField("event_time", StringType()),
         StructField("event_type", StringType()),
@@ -73,7 +81,7 @@ def main():
         StructField("user_session", StringType())
     ])
 
-    # 3. Biến đổi (Transformations)
+    # 3. Parse and transform
     df_events = df_kafka.select(
         from_json(col("value").cast("string"), schema).alias("data")
     ).select("data.*")
@@ -85,31 +93,39 @@ def main():
     df_with_watermark = df_processed \
         .withWatermark("event_timestamp", "10 minutes")
 
-    # --- BƯỚC MỚI: JOIN LUỒNG VỚI DỮ LIỆU STATIC ---
-    # YÊU CẦU: "Join Operations" (Stream-Static Join)
-    print("Đang join luồng với catalog...")
-    df_enriched_stream = df_with_watermark.join(
+    # 4. Join with product catalog (Stream-Static Join)
+    print("🔗 Joining stream with product catalog...")
+    df_enriched = df_with_watermark.join(
         df_product_catalog,
-        "product_id", # Khóa join
-        "left_outer"  # Kiểu join: giữ tất cả sự kiện, ngay cả khi không tìm thấy sản phẩm
+        "product_id",
+        "left_outer"
     )
-    # --- KẾT THÚC BƯỚC MỚI ---
 
-    # 4. TÍNH TOÁN AGGREGATION TRÊN DỮ LIỆU ĐÃ JOIN
-    # YÊU CẦU: "Complex Aggregations"
-    print("Đang tính toán aggregation trên dữ liệu đã enrich...")
-    df_windowed_counts = df_enriched_stream \
+    # 5. Complex aggregations
+    print("📊 Creating windowed aggregations...")
+    df_windowed_counts = df_enriched \
         .groupBy(
             window(col("event_timestamp"), "1 minute", "30 seconds").alias("time_window"),
-            col("category_name"), # <-- DÙNG CỘT MỚI TỪ JOIN
+            col("category_name"),
             col("event_type")
         ) \
-        .count() 
-        # <--- DÒNG ORDER BY ĐÃ BỊ XÓA
+        .agg(
+            count("*").alias("event_count")
+        )
 
-    # 5. GHI KẾT QUẢ RA 2 NƠI (SINK) CÙNG LÚC
+    # 6. Write to console and MongoDB
+    def write_agg_to_mongo(batch_df, epoch_id):
+        print(f"--- [Mongo] Epoch {epoch_id} ---")
+        
+        if not batch_df.isEmpty():
+            batch_df.write \
+                .format("mongodb") \
+                .mode("append") \
+                .save()
+            print(f"--- [Mongo] Wrote {batch_df.count()} aggregations ---")
+        else:
+            print(f"--- [Mongo] No data in this epoch ---")
 
-    # --- SINK 1: GHI RA CONSOLE (ĐỂ DEBUG) ---
     query_console = df_windowed_counts.writeStream \
         .outputMode("complete") \
         .format("console") \
@@ -117,35 +133,18 @@ def main():
         .trigger(processingTime="30 seconds") \
         .start()
 
-    # --- SINK 2: GHI VÀO MONGODB ---
-    # Dùng foreachBatch để ghi vào MongoDB
-    
-    def write_agg_to_mongo(batch_df, epoch_id):
-        print(f"--- [Mongo Sink] Đang ghi Epoch {epoch_id} ---")
-        
-        if not batch_df.isEmpty():
-            batch_df.write \
-                .format("mongodb") \
-                .mode("append") \
-                .save() # Cấu hình .config() ở SparkSession sẽ được dùng
-            print(f"--- [Mongo Sink] Đã ghi vào collection '{MONGO_COLLECTION_NAME}' ---")
-        else:
-            print(f"--- [Mongo Sink] Không có dữ liệu mới trong epoch này ---")
-
     query_mongo = df_windowed_counts.writeStream \
         .outputMode("update") \
         .foreachBatch(write_agg_to_mongo) \
         .trigger(processingTime="30 seconds") \
-        .option("checkpointLocation", "/opt/spark/work-dir/checkpoints/mongo_agg_sink") \
+        .option("checkpointLocation", "./checkpoints/k8s_agg") \
         .start()
 
-
-    print("=== Ứng dụng Spark Streaming đang chạy (Join + Aggregation) ===")
-    print(f"=== Dữ liệu sẽ được in ra console VÀ ghi vào MongoDB (Collection: {MONGO_COLLECTION_NAME}) ===")
+    print("=" * 60)
+    print("🎯 K8s Streaming App Running (Join + Aggregation)")
+    print("=" * 60)
     
-    # Đợi 1 query bất kỳ (ví dụ query_console)
     query_console.awaitTermination()
 
 if __name__ == "__main__":
     main()
-

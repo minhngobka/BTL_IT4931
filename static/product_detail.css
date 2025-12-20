@@ -1,0 +1,262 @@
+/* Reset và cấu hình chung */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f4f6f9;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* ==== HEADER (Shopee style) ==== */
+.main-header {
+    color: white;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    margin-bottom: 20px;
+}
+
+/* Top bar */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    background-color: #3a3e9d; /* dark blue */
+    padding: 8px 20px;
+    font-size: 0.85em;
+}
+
+.top-bar a {
+    color: white;
+    text-decoration: none;
+    margin-right: 15px;
+    transition: opacity 0.2s;
+}
+
+.top-bar a:hover {
+    opacity: 0.8;
+}
+
+/* Main bar: logo, search, cart */
+.main-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #4b6cb7;
+    padding: 15px 20px;
+}
+
+.logo a {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: white;
+    text-decoration: none;
+}
+
+.search-bar {
+    flex-grow: 1;
+    margin: 0 20px;
+    display: flex;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px 0 0 4px;
+    font-size: 1em;
+}
+
+.search-bar button {
+    background: #2c3e50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+}
+
+/* Cart icon */
+.cart-icon {
+    font-size: 1.5em;
+    cursor: pointer;
+    color: white;
+}
+
+/* Quick nav links */
+.quick-links {
+    display: flex;
+    gap: 15px;
+    padding: 10px 20px;
+    background-color: #5e65d3;
+    font-size: 0.9em;
+    flex-wrap: wrap;
+}
+
+.quick-links a {
+    color: white;
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.quick-links a:hover {
+    opacity: 0.8;
+}
+
+/* ======= MAIN CONTENT ======= */
+.container {
+    max-width: 1200px;
+    margin: 30px auto;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    overflow: hidden;
+    padding: 20px 30px;
+}
+
+/* Layout chính */
+.product-detail-layout {
+    display: flex;
+    gap: 40px;
+    padding: 30px 0;
+    flex-wrap: wrap;
+}
+
+/* Chi tiết sản phẩm */
+.product-info {
+    flex: 1;
+    min-width: 300px;
+}
+
+.product-info h2 {
+    font-size: 1.8em;
+    margin-bottom: 15px;
+}
+
+.detail-image img {
+    width: 100%;
+    max-height: 350px;
+    object-fit: contain;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.product-details p {
+    margin: 10px 0;
+    font-size: 1em;
+}
+
+.price {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #e74c3c;
+}
+
+/* Button */
+.btn-add-cart {
+    display: inline-block;
+    background: #4facfe;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    font-size: 1em;
+    border-radius: 30px;
+    margin-top: 20px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.btn-add-cart:hover {
+    background: #00c6ff;
+}
+
+/* Gợi ý sản phẩm */
+.recommendations {
+    flex: 1;
+    min-width: 300px;
+}
+
+.recommendations h3 {
+    font-size: 1.5em;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #4facfe;
+    padding-bottom: 10px;
+    color: #444;
+}
+
+.recommendations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 20px;
+}
+
+.recommendation-card {
+    background: #fdfdfd;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    transition: box-shadow 0.3s ease;
+}
+
+.recommendation-card:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+}
+
+.product-name {
+    font-weight: bold;
+    font-size: 0.95em;
+    margin: 8px 0;
+}
+
+.product-price {
+    color: #e67e22;
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+.confidence-badge {
+    display: inline-block;
+    background: #2ecc71;
+    color: white;
+    padding: 4px 10px;
+    font-size: 0.8em;
+    border-radius: 20px;
+    margin: 8px 0;
+}
+
+.btn-view {
+    margin-top: 10px;
+    padding: 8px 15px;
+    background: #667eea;
+    border: none;
+    color: white;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background 0.3s ease;
+}
+
+.btn-view:hover {
+    background: #5a6bdc;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .product-detail-layout {
+        flex-direction: column;
+    }
+
+    .main-bar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .search-bar {
+        margin: 10px 0;
+        width: 100%;
+    }
+}

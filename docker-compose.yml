@@ -31,6 +31,53 @@ services:
     networks:
       - kafka-network
 
+  # ========== HDFS - Namenode ==========
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    restart: always
+    ports:
+      - "9000:9000"      # HDFS
+      - "50070:50070"    # Web UI
+    environment:
+      CLUSTER_NAME: hadoop
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+      CORE_CONF_hadoop_http_staticuser_user: root
+      CORE_CONF_hadoop_proxyuser_hue_hosts: "*"
+      CORE_CONF_hadoop_proxyuser_hue_groups: "*"
+      HDFS_CONF_dfs_permissions_enabled: "false"
+      HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check: "false"
+    networks:
+      - kafka-network
+    volumes:
+      - namenode_data:/hadoop/dfs/name
+
+  # ========== HDFS - Datanode ==========
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode
+    restart: always
+    depends_on:
+      - namenode
+    ports:
+      - "50075:50075"    # Web UI
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000"
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+      CORE_CONF_hadoop_http_staticuser_user: root
+      CORE_CONF_hadoop_proxyuser_hue_hosts: "*"
+      CORE_CONF_hadoop_proxyuser_hue_groups: "*"
+      HDFS_CONF_dfs_permissions_enabled: "false"
+      HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check: "false"
+    networks:
+      - kafka-network
+    volumes:
+      - datanode_data:/hadoop/dfs/data
+
 networks:
   kafka-network:
     driver: bridge
+
+volumes:
+  namenode_data:
+  datanode_data:

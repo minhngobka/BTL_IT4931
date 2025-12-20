@@ -27,7 +27,7 @@ class ProductRecommender:
             print(f"⚠️ Could not load products: {e}")
             self.all_products = []
     
-    def get_recommendations(self, product_id, top_n=5):
+    def get_recommendations(self, product_id, top_n=6):
         """
         Lấy gợi ý sản phẩm dựa trên Brand hoặc Category
         

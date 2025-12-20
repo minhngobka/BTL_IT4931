@@ -1,4 +1,3 @@
-let selectedProduct = null;
 let currentPage = 1;
 const limit = 20;
 let totalPages = 1;
@@ -36,58 +35,23 @@ async function loadPage(page) {
 function createProductCard(product) {
     const card = document.createElement('div');
     card.className = 'product-card';
+    
+    // Xử lý NaN price
+    const price = isNaN(product.price) ? 0 : product.price;
+    
     card.innerHTML = `
+        <img src="${product.image_url || 'https://via.placeholder.com/200'}" alt="${product.product_name}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;">
         <div class="product-name">${product.product_name || 'Sản phẩm'}</div>
-        <div class="product-price">${(product.price || 0).toLocaleString()}₫</div>
+        <div class="product-category">${product.category_name || 'Chưa phân loại'}</div>
+        <div class="product-price">${price.toLocaleString()}₫</div>
     `;
 
-    card.addEventListener('click', () => selectProduct(product, card));
-    return card;
-}
-
-// Xử lý chọn sản phẩm để lấy gợi ý
-function selectProduct(product, element) {
-    document.querySelectorAll('.product-card').forEach(el => {
-        el.classList.remove('selected');
+    // Click để vào trang chi tiết
+    card.addEventListener('click', () => {
+        window.location.href = `/product/${product.product_id}`;
     });
 
-    element.classList.add('selected');
-    selectedProduct = product;
-    getRecommendations(product._id || product.product_id);
-}
-
-// Gọi API lấy gợi ý sản phẩm
-async function getRecommendations(productId) {
-    try {
-        const response = await fetch('/api/recommend', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ product_id: productId })
-        });
-
-        const data = await response.json();
-        displayRecommendations(data.recommendations);
-    } catch (error) {
-        console.error('Lỗi lấy gợi ý:', error);
-    }
-}
-
-// Hiển thị các sản phẩm được gợi ý
-function displayRecommendations(recommendations) {
-    const container = document.getElementById('recommendations');
-
-    if (!recommendations || recommendations.length === 0) {
-        container.innerHTML = '<p class="empty-state">Không có gợi ý nào</p>';
-        return;
-    }
-
-    container.innerHTML = recommendations.map(rec => `
-        <div class="recommendation-card">
-            <div class="product-name">${rec.product_name}</div>
-            <div class="product-price">${(rec.price || 0).toLocaleString()}₫</div>
-            <div class="confidence-badge">Độ phù hợp: ${rec.confidence}</div>
-        </div>
-    `).join('');
+    return card;
 }
 
 // Hiển thị các nút phân trang
@@ -110,17 +74,14 @@ function renderPaginationControls(current) {
     let startPage = Math.max(1, current - 2);
     let endPage = Math.min(totalPages, current + 2);
 
-    // Adjust if at start
     if (current <= 3) {
         endPage = Math.min(5, totalPages);
     }
 
-    // Adjust if at end
     if (current >= totalPages - 2) {
         startPage = Math.max(totalPages - 4, 1);
     }
 
-    // Always show first page
     if (startPage > 1) {
         addPageButton(container, 1);
         if (startPage > 2) {
@@ -128,12 +89,10 @@ function renderPaginationControls(current) {
         }
     }
 
-    // Middle pages
     for (let i = startPage; i <= endPage; i++) {
         addPageButton(container, i, i === current);
     }
 
-    // Always show last page
     if (endPage < totalPages) {
         if (endPage < totalPages - 1) {
             container.appendChild(createEllipsis());
@@ -141,7 +100,6 @@ function renderPaginationControls(current) {
         addPageButton(container, totalPages);
     }
 
-    // » Next button
     if (current < totalPages) {
         const nextBtn = document.createElement('button');
         nextBtn.textContent = '»';
@@ -170,4 +128,3 @@ function createEllipsis() {
     span.className = 'ellipsis';
     return span;
 }
-

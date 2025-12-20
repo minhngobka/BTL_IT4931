@@ -1,34 +1,61 @@
 <!DOCTYPE html>
 <html lang="vi">
-<head>
+<header class="main-header">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gợi Ý Sản Phẩm - E-Commerce</title>
+    <title>My Shop</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
+    <div class="top-bar">
+        <div class="left-links">
+            <a href="#">Kênh Người Bán</a>
+            <a href="#">Trở thành Người bán</a>
+            <a href="#">Tải ứng dụng</a>
+            <a href="#">Kết nối</a>
+        </div>
+        <div class="right-links">
+            <a href="#">Thông Báo</a>
+            <a href="#">Hỗ Trợ</a>
+            <a href="#">Tiếng Việt</a>
+            <a href="#">Đăng Ký</a>
+            <a href="#">Đăng Nhập</a>
+        </div>
+    </div>
+
+    <div class="main-bar">
+        <div class="logo">MyShop</div>
+        <div class="search-bar">
+            <input type="text" placeholder="Tìm sản phẩm...">
+            <button>Tìm kiếm</button>
+        </div>
+        <div class="cart-icon">
+            Giỏ hàng
+        </div>
+    </div>
+
+    <nav class="quick-links">
+        <a href="#">Áo Khoác</a>
+        <a href="#">Giày Dép</a>
+        <a href="#">Máy Tính</a>
+        <a href="#">Điện Thoại</a>
+        <a href="#">Mũ Nón</a>
+        <a href="#">Phụ Kiện</a>
+    </nav>
+</header>
 <body>
     <div class="container">
         <header>
-            <h1>Hệ Thống Gợi Ý Sản Phẩm</h1>
+            <h1>Các sản phẩm của hệ thống</h1>
             <p>Khám phá sản phẩm mà bạn có thể thích</p>
         </header>
 
         <main>
             <!-- Phần 1: Chọn sản phẩm -->
             <section class="product-section">
-                <h2>Các sản phẩm </h2>
+                <h2>Các sản phẩm</h2>
                 <div class="product-grid" id="productGrid">
                     <!-- Sẽ được load từ API -->
                 </div>
                 <div class="pagination-controls" id="paginationControls"></div>
-            </section>
-
-            <!-- Phần 2: Gợi ý -->
-            <section class="recommendation-section">
-                <h2>Sản Phẩm Liên quan</h2>
-                <div id="recommendations" class="recommendations-grid">
-                    <p class="empty-state">Chọn một sản phẩm để xem gợi ý</p>
-                </div>
             </section>
         </main>
     </div>
