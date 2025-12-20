@@ -310,7 +310,7 @@ echo "Building Spark application Docker image..."
 echo "This will take 5-10 minutes on first build..."
 echo ""
 
-docker build -t bigdata-spark:latest -f deploy/docker/Dockerfile .
+docker build -t huynambka/bigdata-spark:latest -f deploy/docker/Dockerfile .
 check_success
 
 echo ""
@@ -399,66 +399,66 @@ echo ""
 
 wait_for_user
 
-echo -e "${BLUE}=== PHASE 11: Deploy Monitoring Stack ===${NC}"
-echo ""
+# echo -e "${BLUE}=== PHASE 11: Deploy Monitoring Stack ===${NC}"
+# echo ""
 
-# Add Helm repositories
-echo "Adding Helm repositories..."
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
-helm repo update
-check_success
+# # Add Helm repositories
+# echo "Adding Helm repositories..."
+# helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
+# helm repo update
+# check_success
 
-# Check if Prometheus stack is already installed
-if helm list | grep -q "prometheus"; then
-    echo -e "${GREEN}✓${NC} Prometheus stack is already installed"
-else
-    echo ""
-    echo "Installing Prometheus & Grafana stack..."
-    echo "This includes Prometheus, Grafana, and Alertmanager"
-    helm install prometheus prometheus-community/kube-prometheus-stack
-    check_success
-fi
+# # Check if Prometheus stack is already installed
+# if helm list | grep -q "prometheus"; then
+#     echo -e "${GREEN}✓${NC} Prometheus stack is already installed"
+# else
+#     echo ""
+#     echo "Installing Prometheus & Grafana stack..."
+#     echo "This includes Prometheus, Grafana, and Alertmanager"
+#     helm install prometheus prometheus-community/kube-prometheus-stack
+#     check_success
+# fi
 
-echo ""
-echo "Waiting for Prometheus pods to be ready (this may take 2-3 minutes)..."
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=grafana --timeout=300s 2>/dev/null || echo "Still starting..."
+# echo ""
+# echo "Waiting for Prometheus pods to be ready (this may take 2-3 minutes)..."
+# kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=grafana --timeout=300s 2>/dev/null || echo "Still starting..."
 
-# Check if MongoDB exporter is already installed
-if helm list | grep -q "mongo-exporter"; then
-    echo -e "${GREEN}✓${NC} MongoDB exporter is already installed"
-else
-    echo ""
-    echo "Installing MongoDB exporter..."
-    helm install mongo-exporter prometheus-community/prometheus-mongodb-exporter \
-      -f ./deploy/kubernetes/base/mongo-exporter-values.yaml
-    check_success
-fi
+# # Check if MongoDB exporter is already installed
+# if helm list | grep -q "mongo-exporter"; then
+#     echo -e "${GREEN}✓${NC} MongoDB exporter is already installed"
+# else
+#     echo ""
+#     echo "Installing MongoDB exporter..."
+#     helm install mongo-exporter prometheus-community/prometheus-mongodb-exporter \
+#       -f ./deploy/kubernetes/base/mongo-exporter-values.yaml
+#     check_success
+# fi
 
-echo ""
-echo "Upgrading Prometheus with custom Grafana configuration..."
-helm upgrade prometheus prometheus-community/kube-prometheus-stack -f config/grafana-values.yaml
-check_success
+# echo ""
+# echo "Upgrading Prometheus with custom Grafana configuration..."
+# helm upgrade prometheus prometheus-community/kube-prometheus-stack -f config/grafana-values.yaml
+# check_success
 
-echo ""
-echo "Getting Grafana admin password..."
-GRAFANA_PASSWORD=$(kubectl --namespace default get secrets prometheus-grafana -o jsonpath="{.data.admin-password}" | base64 -d)
-echo -e "Grafana Password: ${GREEN}$GRAFANA_PASSWORD${NC}"
+# echo ""
+# echo "Getting Grafana admin password..."
+# GRAFANA_PASSWORD=$(kubectl --namespace default get secrets prometheus-grafana -o jsonpath="{.data.admin-password}" | base64 -d)
+# echo -e "Grafana Password: ${GREEN}$GRAFANA_PASSWORD${NC}"
 
-echo ""
-echo "Setting up Grafana port-forward (3000)..."
-pkill -f "port-forward.*grafana" 2>/dev/null || true
-sleep 2
-kubectl port-forward svc/prometheus-grafana 3000:80 > /dev/null 2>&1 &
-GRAFANA_PID=$!
-echo "Grafana port-forward PID: $GRAFANA_PID"
+# echo ""
+# echo "Setting up Grafana port-forward (3000)..."
+# pkill -f "port-forward.*grafana" 2>/dev/null || true
+# sleep 2
+# kubectl port-forward svc/prometheus-grafana 3000:80 > /dev/null 2>&1 &
+# GRAFANA_PID=$!
+# echo "Grafana port-forward PID: $GRAFANA_PID"
 
-echo ""
-echo -e "${GREEN}✓ Monitoring stack deployed!${NC}"
-echo "  🔹 Grafana: http://localhost:3000 (admin/$GRAFANA_PASSWORD)"
-echo "  🔹 Prometheus: Available via Grafana"
-echo "  🔹 MongoDB Exporter: Collecting metrics"
+# echo ""
+# echo -e "${GREEN}✓ Monitoring stack deployed!${NC}"
+# echo "  🔹 Grafana: http://localhost:3000 (admin/$GRAFANA_PASSWORD)"
+# echo "  🔹 Prometheus: Available via Grafana"
+# echo "  🔹 MongoDB Exporter: Collecting metrics"
 
-wait_for_user
+# wait_for_user
 
 echo -e "${BLUE}=== PHASE 12: Deploy Metabase ===${NC}"
 echo ""

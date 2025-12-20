@@ -3,7 +3,7 @@
 from pyspark.sql import DataFrame, Window
 from pyspark.sql.functions import (
     col, count, sum as _sum, avg, min as _min, max as _max,
-    countDistinct, unix_timestamp, when, expr
+    countDistinct, approx_count_distinct, unix_timestamp, when, expr
 )
 
 
@@ -24,8 +24,8 @@ class SessionAnalyzer:
             _sum(when(col("event_type") == "cart", 1).otherwise(0)).alias("cart_count"),
             _sum(when(col("event_type") == "purchase", 1).otherwise(0)).alias("purchase_count"),
             _sum("price").alias("total_revenue"),
-            countDistinct("product_id").alias("unique_products"),
-            countDistinct("category_name").alias("unique_categories")
+            approx_count_distinct("product_id").alias("unique_products"),
+            approx_count_distinct("category_name").alias("unique_categories")
         )
         
         # Calculate session duration in minutes
@@ -52,9 +52,9 @@ class SessionAnalyzer:
         View → Cart → Purchase
         """
         df_funnel = df.groupBy().agg(
-            countDistinct(when(col("event_type") == "view", col("user_session"))).alias("sessions_with_view"),
-            countDistinct(when(col("event_type") == "cart", col("user_session"))).alias("sessions_with_cart"),
-            countDistinct(when(col("event_type") == "purchase", col("user_session"))).alias("sessions_with_purchase"),
+            approx_count_distinct(when(col("event_type") == "view", col("user_session"))).alias("sessions_with_view"),
+            approx_count_distinct(when(col("event_type") == "cart", col("user_session"))).alias("sessions_with_cart"),
+            approx_count_distinct(when(col("event_type") == "purchase", col("user_session"))).alias("sessions_with_purchase"),
             count("*").alias("total_events")
         )
         

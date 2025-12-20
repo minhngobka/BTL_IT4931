@@ -69,7 +69,7 @@ spec:
       containers:
       - name: spark-streaming
         image: huynambka/bigdata-spark:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Never
         command: ["/bin/bash", "-c"]
         args:
           - |

@@ -14,7 +14,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Check if Spark pod is running
-SPARK_POD=$(kubectl get pod -l app=spark-streaming -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+SPARK_POD=$(kubectl get pod -l app=spark-streaming-pvc -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
 
 if [ -z "$SPARK_POD" ]; then
     echo -e "${RED}❌ Spark streaming pod not found${NC}"

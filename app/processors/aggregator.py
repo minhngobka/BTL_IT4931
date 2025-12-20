@@ -31,7 +31,7 @@ class Aggregator:
         else:
             window_spec = window(col("event_timestamp"), window_duration)
         
-        # Aggregate
+        # Aggregate (using approx_count_distinct for streaming)
         df_agg = df_watermarked.groupBy(
             window_spec.alias("time_window"),
             col("event_type")
@@ -39,9 +39,9 @@ class Aggregator:
             count("*").alias("event_count"),
             _sum("price").alias("total_revenue"),
             avg("price").alias("avg_price"),
-            countDistinct("user_id").alias("unique_users"),
-            countDistinct("product_id").alias("unique_products"),
-            countDistinct("user_session").alias("unique_sessions")
+            approx_count_distinct("user_id").alias("unique_users"),
+            approx_count_distinct("product_id").alias("unique_products"),
+            approx_count_distinct("user_session").alias("unique_sessions")
         )
         
         return df_agg
@@ -53,7 +53,7 @@ class Aggregator:
             count("*").alias("event_count"),
             _sum("price").alias("total_revenue"),
             avg("price").alias("avg_price"),
-            countDistinct("user_id").alias("unique_users")
+            approx_count_distinct("user_id").alias("unique_users")
         )
         
         return df_agg
@@ -68,7 +68,7 @@ class Aggregator:
             _sum((col("event_type") == "purchase").cast("int")).alias("purchase_count"),
             _sum("price").alias("total_spent"),
             avg("price").alias("avg_order_value"),
-            countDistinct("product_id").alias("unique_products_viewed")
+            approx_count_distinct("product_id").alias("unique_products_viewed")
         )
         
         return df_agg
