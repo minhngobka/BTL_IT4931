@@ -27,7 +27,42 @@ class ProductRecommender:
             print(f"⚠️ Could not load products: {e}")
             self.all_products = []
     
-    def get_recommendations(self, product_id, top_n=6):
+    def get_recommendations(self, product_id, top_n=5):
+        """
+        Lấy gợi ý sản phẩm theo order:
+        1. Nếu product_id có trong bảng recommendations → dùng ML batch recommend
+        2. Nếu không, dùng logic category/brand/random như cũ
+        """
+        # Ưu tiên lấy từ batch ML (nếu có)
+        reco_doc = self.db.recommendations.find_one({'product_id': str(product_id)})
+        if reco_doc and 'recs' in reco_doc and reco_doc['recs']:
+            # Lấy list product_id gợi ý từ batch ML (ưu tiên score cao nhất)
+            result = []
+            for r in reco_doc['recs'][:top_n]:
+                # Ghép thêm thông tin sản phẩm từ catalog (nếu cần)
+                p = next((p for p in self.all_products if str(p['product_id']) == str(r['product_id'])), {})
+                result.append({
+                    'product_id': r['product_id'],
+                    'product_name': p.get('product_name', 'Unknown'),
+                    'category_name': p.get('category_name', ''),
+                    'brand': p.get('brand', ''),
+                    'price': p.get('price', 0),
+                    'image_url': p.get('image_url', ''),
+                    'reason': 'Gợi ý từ ML batch',
+                    'confidence': round(r.get('score', 0.8), 2),
+                    'source': 'ml_batch',
+                })
+
+        if len(result) < top_n:
+            more = self._recommend_heuristic(product_id, top_n=top_n-len(result))
+            # Tránh trùng lặp với những cái đã lấy
+            existed_ids = set(r['product_id'] for r in result)
+            for p in more:
+                if p['product_id'] not in existed_ids and len(result) < top_n:
+                    result.append(p)
+        return result
+
+    def _recommend_heuristic(self, product_id, top_n=5):
         """
         Lấy gợi ý sản phẩm dựa trên Brand hoặc Category
         
@@ -77,7 +112,8 @@ class ProductRecommender:
                 'price': p.get('price', 0),
                 'image_url': p.get('image_url', ''),
                 'reason': f"Cùng category: {category}",
-                'confidence': 0.85
+                'confidence': 0.85,
+                'source': 'heuristic',
             })
         
         # Thêm sản phẩm cùng brand

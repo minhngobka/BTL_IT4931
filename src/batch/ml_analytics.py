@@ -34,7 +34,6 @@ from pyspark.ml.evaluation import (
 )
 from pyspark.ml import Pipeline
 from pyspark.ml.stat import Correlation, ChiSquareTest
-from pyspark import StorageLevel
 
 # Load environment variables from config/.env
 env_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config', '.env')
@@ -70,9 +69,6 @@ def create_spark_session():
         .config("spark.sql.adaptive.skewJoin.enabled", "true") \
         .config("spark.sql.autoBroadcastJoinThreshold", "10485760") \
         .config("spark.default.parallelism", "8") \
-        .config("spark.executor.memory", "4g") \
-        .config("spark.executor.memoryOverhead", "1g") \
-        .config("spark.memory.fraction", "0.8") \
         .getOrCreate()
     
     spark.sparkContext.setLogLevel("WARN")
@@ -98,14 +94,10 @@ def load_and_optimize_data(spark):
         .filter(col("event_timestamp").isNotNull()) \
         .filter(col("user_id").isNotNull())
     
-    #Modify --> Hot data
-    df_events_filtered.persist(StorageLevel.MEMORY_ONLY)
-    count = df_events_filtered.count()
-    print(f"✓ Loaded and cached {count} events (StorageLevel.MEMORY_ONLY)")
     # Cache for reuse (Performance Optimization requirement)
-    # df_events_filtered.cache()
-    # count = df_events_filtered.count()
-    # print(f"✓ Loaded and cached {count} events")
+    df_events_filtered.cache()
+    count = df_events_filtered.count()
+    print(f"✓ Loaded and cached {count} events")
     
     # Load session data
     try:
@@ -113,11 +105,8 @@ def load_and_optimize_data(spark):
             .format("mongodb") \
             .option("collection", MONGO_COLLECTION_SESSIONS) \
             .load()
-        #df_sessions.cache()
-        #print(f"✓ Loaded and cached {df_sessions.count()} sessions")
-        #modify : warm data
-        df_sessions.persist(StorageLevel.MEMORY_AND_DISK)
-        print(f"✓ Loaded and cached {df_sessions.count()} sessions (MEMORY_AND_DISK)")
+        df_sessions.cache()
+        print(f"✓ Loaded and cached {df_sessions.count()} sessions")
     except:
         df_sessions = None
         print("⚠ Session data not available, will compute from events")
