@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Shop - E-Commerce Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Header -->
+    <header class="main-header">
+        <div class="top-bar">
+            <div class="left-links">
+                <a href="#">Kênh Người Bán</a>
+                <a href="#">Trở thành Người bán</a>
+                <a href="#">Tải ứng dụng</a>
+            </div>
+            <div class="right-links">
+                <a href="#">Thông Báo</a>
+                <a href="#">Hỗ Trợ</a>
+                <a href="#">Tiếng Việt</a>
+                <a href="#">Đăng Nhập</a>
+            </div>
+        </div>
+
+        <div class="main-bar">
+            <div class="logo">MyShop</div>
+            <div class="search-bar">
+                <input type="text" placeholder="Tìm sản phẩm...">
+                <button>Tìm kiếm</button>
+            </div>
+            <div class="cart-icon">Giỏ hàng</div>
+        </div>
+
+        <nav class="quick-links">
+            <a href="#">Áo Khoác</a>
+            <a href="#">Giày Dép</a>
+            <a href="#">Máy Tính</a>
+            <a href="#">Điện Thoại</a>
+            <a href="#">Mũ Nón</a>
+            <a href="#">Phụ Kiện</a>
+        </nav>
+    </header>
+
+    <!-- Nội dung chính -->
+    <div class="container">
+        <header>
+            <h1>Các Sản Phẩm Hôm Nay</h1>
+            <p>Khám phá những sản phẩm tuyệt vời mà bạn sẽ yêu thích</p>
+        </header>
+
+        <main>
+            <section class="product-section">
+                <!-- <h2>Sản Phẩm Nổi Bật (<span id="totalProducts">0</span> sản phẩm)</h2> -->
+                
+                <div class="product-grid" id="productGrid">
+                    <div class="loading-spinner">Đang tải sản phẩm...</div>
+                </div>
+                
+                <div class="pagination-controls" id="paginationControls"></div>
+            </section>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2025 MyShop - Nền tảng thương mại điện tử hàng đầu</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

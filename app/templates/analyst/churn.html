@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>⚠️ Churn Prediction</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .navbar {
+            background: rgba(0,0,0,0.3);
+            padding: 15px 30px;
+            display: flex;
+            gap: 30px;
+        }
+        .navbar a { color: #fff; text-decoration: none; padding: 8px 16px; border-radius: 8px; }
+        .navbar a:hover, .navbar a.active { background: rgba(255,255,255,0.1); }
+        .container { max-width: 1400px; margin: 0 auto; padding: 30px; }
+        
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+        }
+        .stat-value { font-size: 2.5em; font-weight: bold; }
+        .stat-value.danger { color: #e74c3c; }
+        .stat-value.success { color: #2ecc71; }
+        .stat-label { color: #aaa; margin-top: 5px; }
+        
+        table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; }
+        th { background: rgba(231,76,60,0.3); padding: 15px; text-align: left; }
+        td { padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .risk-high { color: #e74c3c; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <strong>📊 Analyst Dashboard</strong>
+        <a href="/">Overview</a>
+        <a href="/funnel">Funnel</a>
+        <a href="/segments">Segments</a>
+        <a href="/churn" class="active">Churn</a>
+        <a href="/trends">Trends</a>
+    </nav>
+
+    <div class="container">
+        <h1 style="margin-bottom: 30px;">⚠️ Churn Risk Analysis</h1>
+        
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value" id="total-users">-</div>
+                <div class="stat-label">Total Users Analyzed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value danger" id="churn-count">-</div>
+                <div class="stat-label">Predicted to Churn</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value danger" id="churn-rate">-</div>
+                <div class="stat-label">Churn Rate</div>
+            </div>
+        </div>
+        
+        <h2 style="margin: 30px 0 20px;">🚨 High-Value Users at Risk</h2>
+        <p style="color: #aaa; margin-bottom: 15px;">Users with high spending but predicted to churn - Priority for retention!</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Total Spent</th>
+                    <th>Purchases</th>
+                    <th>Days Inactive</th>
+                    <th>Conversion Rate</th>
+                    <th>Risk</th>
+                </tr>
+            </thead>
+            <tbody id="risk-users"></tbody>
+        </table>
+    </div>
+
+    <script>
+        fetch('/api/churn')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('total-users').textContent = 
+                        data.stats.total_users.toLocaleString();
+                    document.getElementById('churn-count').textContent = 
+                        data.stats.predicted_churn.toLocaleString();
+                    document.getElementById('churn-rate').textContent = 
+                        data.stats.churn_rate + '%';
+                    
+                    const tbody = document.getElementById('risk-users');
+                    data.high_risk_users.forEach(u => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${u.user_id}</td>
+                                <td>$${(u.total_spent || 0).toFixed(2)}</td>
+                                <td>${u.purchase_count || 0}</td>
+                                <td>${u.recency_days || 0} days</td>
+                                <td>${((u.overall_conversion_rate || 0) * 100).toFixed(1)}%</td>
+                                <td class="risk-high">⚠️ HIGH</td>
+                            </tr>
+                        `;
+                    });
+                }
+            });
+    </script>
+</body>
+</html>

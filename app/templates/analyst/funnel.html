@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>🎯 Funnel Analysis</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; color: #fff; }
+        .navbar { background: rgba(0,0,0,0.3); padding: 15px 30px; display: flex; gap: 30px; }
+        .navbar a { color: #fff; text-decoration: none; padding: 8px 16px; border-radius: 8px; }
+        .navbar a:hover, .navbar a.active { background: rgba(255,255,255,0.1); }
+        .container { max-width: 1000px; margin: 0 auto; padding: 30px; }
+        
+        .funnel-stage { margin: 20px 0; }
+        .funnel-bar { display: flex; align-items: center; }
+        .funnel-label { width: 250px; font-size: 1.1em; }
+        .funnel-value {
+            height: 50px;
+            background: linear-gradient(90deg, #00d4ff, #0066ff);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .funnel-percent {
+            margin-left: 15px;
+            color: #2ecc71;
+            font-size: 1.1em;
+        }
+        .funnel-dropoff {
+            color: #e74c3c;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <strong>📊 Analyst Dashboard</strong>
+        <a href="/">Overview</a>
+        <a href="/funnel" class="active">Funnel</a>
+        <a href="/segments">Segments</a>
+        <a href="/churn">Churn</a>
+        <a href="/trends">Trends</a>
+    </nav>
+
+    <div class="container">
+        <h1 style="margin-bottom: 30px;">🎯 Conversion Funnel Analysis</h1>
+        <div id="funnel-container"></div>
+    </div>
+
+    <script>
+        fetch('/api/funnel')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const container = document.getElementById('funnel-container');
+                    const metrics = data.metrics;
+                    
+                    // Separate counts and rates
+                    const counts = metrics.filter(m => !m.metric.includes('percent'));
+                    const rates = metrics.filter(m => m.metric.includes('percent'));
+                    
+                    const maxVal = Math.max(...counts.map(m => m.value));
+                    
+                    counts.forEach((m, i) => {
+                        const width = (m.value / maxVal * 100);
+                        const rate = rates.find(r => r.metric.includes(m.metric.split('_').slice(-1)[0]));
+                        
+                        container.innerHTML += `
+                            <div class="funnel-stage">
+                                <div class="funnel-bar">
+                                    <div class="funnel-label">${m.description}</div>
+                                    <div class="funnel-value" style="width: ${width}%">
+                                        ${m.value.toLocaleString()}
+                                    </div>
+                                    ${rate ? `<span class="funnel-percent">${rate.value}%</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            });
+    </script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Analyst Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .navbar {
+            background: rgba(0,0,0,0.3);
+            padding: 15px 30px;
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        .navbar a {
+            color: #fff;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+        .navbar a:hover, .navbar a.active {
+            background: rgba(255,255,255,0.1);
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 30px; }
+        h1 { margin-bottom: 30px; }
+        
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+        }
+        .card-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        .card-label { color: #aaa; margin-top: 5px; }
+        
+        .section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            color: #00d4ff;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+        
+        .funnel-bar {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .funnel-bar .label { width: 200px; }
+        .funnel-bar .bar {
+            height: 30px;
+            background: linear-gradient(90deg, #00d4ff, #0066ff);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            color: #fff;
+            font-weight: bold;
+        }
+        
+        .loading { text-align: center; padding: 50px; color: #aaa; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <strong style="font-size: 1.3em;">📊 Analyst Dashboard</strong>
+        <a href="/" class="active">Overview</a>
+        <a href="/funnel">Funnel</a>
+        <a href="/segments">Segments</a>
+        <a href="/churn">Churn</a>
+        <a href="/trends">Trends</a>
+    </nav>
+
+    <div class="container">
+        <h1>📈 Business Overview</h1>
+        
+        <!-- Overview Cards -->
+        <div class="cards" id="overview-cards">
+            <div class="card">
+                <div class="card-value" id="total-events">-</div>
+                <div class="card-label">Total Events</div>
+            </div>
+            <div class="card">
+                <div class="card-value" id="total-users">-</div>
+                <div class="card-label">Total Users</div>
+            </div>
+            <div class="card">
+                <div class="card-value" id="total-products">-</div>
+                <div class="card-label">Products</div>
+            </div>
+            <div class="card">
+                <div class="card-value" id="total-segments">-</div>
+                <div class="card-label">User Segments</div>
+            </div>
+        </div>
+        
+        <!-- Funnel Section -->
+        <div class="section">
+            <h2>🎯 Conversion Funnel</h2>
+            <div id="funnel-chart">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load Overview
+        fetch('/api/overview')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('total-events').textContent = 
+                        data.overview.total_events.toLocaleString();
+                    document.getElementById('total-users').textContent = 
+                        data.overview.total_users.toLocaleString();
+                    document.getElementById('total-products').textContent = 
+                        data.overview.total_products.toLocaleString();
+                    document.getElementById('total-segments').textContent = 
+                        data.overview.total_segments.toLocaleString();
+                    
+                    // Render funnel
+                    renderFunnel(data.funnel);
+                }
+            });
+        
+        function renderFunnel(metrics) {
+            const container = document.getElementById('funnel-chart');
+            
+            // Find max value for scaling
+            const values = metrics.filter(m => !m.metric.includes('percent'))
+                                  .map(m => m.value);
+            const maxVal = Math.max(...values);
+            
+            let html = '';
+            metrics.forEach(m => {
+                if (!m.metric.includes('percent')) {
+                    const width = (m.value / maxVal * 100);
+                    html += `
+                        <div class="funnel-bar">
+                            <div class="label">${m.metric.replace(/_/g, ' ')}</div>
+                            <div class="bar" style="width: ${width}%">${m.value.toLocaleString()}</div>
+                        </div>
+                    `;
+                }
+            });
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

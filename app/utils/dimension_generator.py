@@ -268,7 +268,10 @@ if __name__ == "__main__":
     # Check if event data exists
     import os
     
-    csv_file = '/workspaces/BTL_IT4931/data/raw/ecommerce_events_2019_oct.csv'
+    # Get project root dynamically
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    csv_file = os.path.join(project_root, 'data/raw/ecommerce_events_2019_oct.csv')
+    
     if not os.path.exists(csv_file):
         print(f"Warning: {csv_file} not found!")
         print("Please download the dataset from Kaggle first.")

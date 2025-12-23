@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📈 Time Series Trends</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .navbar {
+            background: rgba(0,0,0,0.3);
+            padding: 15px 30px;
+            display: flex;
+            gap: 30px;
+        }
+        .navbar a { color: #fff; text-decoration: none; padding: 8px 16px; border-radius: 8px; }
+        .navbar a:hover, .navbar a.active { background: rgba(255,255,255,0.1); }
+        .container { max-width: 1400px; margin: 0 auto; padding: 30px; }
+        
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .filters select {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 1em;
+        }
+        .filters select option { background: #1a1a2e; }
+        
+        .chart-container {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .chart-container h2 {
+            color: #00d4ff;
+            margin-bottom: 20px;
+        }
+        
+        .chart {
+            display: flex;
+            align-items: flex-end;
+            height: 300px;
+            gap: 3px;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .bar {
+            flex: 1;
+            background: linear-gradient(180deg, #00d4ff, #0066ff);
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            min-width: 15px;
+            transition: all 0.3s;
+        }
+        .bar:hover {
+            background: linear-gradient(180deg, #00ffcc, #00d4ff);
+            transform: scaleY(1.05);
+        }
+        .bar:hover .tooltip {
+            display: block;
+        }
+        .tooltip {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            white-space: nowrap;
+            z-index: 10;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        th {
+            background: rgba(0,212,255,0.3);
+            padding: 15px;
+            text-align: left;
+        }
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .positive { color: #2ecc71; }
+        .negative { color: #e74c3c; }
+        
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        .stat-label { color: #aaa; font-size: 0.9em; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <strong>📊 Analyst Dashboard</strong>
+        <a href="/">Overview</a>
+        <a href="/funnel">Funnel</a>
+        <a href="/segments">Segments</a>
+        <a href="/churn">Churn</a>
+        <a href="/trends" class="active">Trends</a>
+    </nav>
+
+    <div class="container">
+        <h1 style="margin-bottom: 30px;">📈 Time Series Trends</h1>
+        
+        <!-- Filters -->
+        <div class="filters">
+            <select id="event-filter">
+                <option value="all">All Events</option>
+                <option value="view">Views</option>
+                <option value="cart">Cart</option>
+                <option value="purchase" selected>Purchases</option>
+            </select>
+        </div>
+        
+        <!-- Summary Stats -->
+        <div class="stats-row" id="summary-stats">
+            <div class="stat-card">
+                <div class="stat-value" id="total-events">-</div>
+                <div class="stat-label">Total Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avg-daily">-</div>
+                <div class="stat-label">Avg Daily Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="peak-day">-</div>
+                <div class="stat-label">Peak Day</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avg-growth">-</div>
+                <div class="stat-label">Avg Daily Growth</div>
+            </div>
+        </div>
+        
+        <!-- Chart -->
+        <div class="chart-container">
+            <h2>📊 Daily Event Count</h2>
+            <div class="chart" id="event-chart"></div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #00d4ff;"></div>
+                    <span>Event Count</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #ff6b6b;"></div>
+                    <span>7-Day Moving Avg</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Data Table -->
+        <div class="chart-container">
+            <h2>📋 Daily Details</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Event Type</th>
+                        <th>Event Count</th>
+                        <th>Unique Users</th>
+                        <th>7-Day MA</th>
+                        <th>Day-over-Day</th>
+                    </tr>
+                </thead>
+                <tbody id="trends-table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let allTrends = [];
+        
+        // Load data
+        fetch('/api/trends')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    allTrends = data.trends;
+                    renderData('purchase');
+                }
+            });
+        
+        // Filter change
+        document.getElementById('event-filter').addEventListener('change', function() {
+            renderData(this.value);
+        });
+        
+        function renderData(eventType) {
+            let filtered = allTrends;
+            if (eventType !== 'all') {
+                filtered = allTrends.filter(t => t.event_type === eventType);
+            }
+            
+            // Sort by date ascending for chart
+            filtered = filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            // Calculate stats
+            const totalEvents = filtered.reduce((sum, t) => sum + (t.event_count || 0), 0);
+            const avgDaily = filtered.length > 0 ? Math.round(totalEvents / filtered.length) : 0;
+            const peakDay = filtered.reduce((max, t) => t.event_count > (max.event_count || 0) ? t : max, {});
+            const growths = filtered.filter(t => t.day_over_day_growth).map(t => t.day_over_day_growth);
+            const avgGrowth = growths.length > 0 ? (growths.reduce((a, b) => a + b, 0) / growths.length).toFixed(1) : 0;
+            
+            // Update stats
+            document.getElementById('total-events').textContent = totalEvents.toLocaleString();
+            document.getElementById('avg-daily').textContent = avgDaily.toLocaleString();
+            document.getElementById('peak-day').textContent = peakDay.date ? new Date(peakDay.date).toLocaleDateString('vi-VN') : '-';
+            document.getElementById('avg-growth').textContent = avgGrowth + '%';
+            document.getElementById('avg-growth').className = 'stat-value ' + (avgGrowth >= 0 ? 'positive' : 'negative');
+            
+            // Render chart
+            renderChart(filtered);
+            
+            // Render table (show newest first)
+            renderTable(filtered.slice().reverse());
+        }
+        
+        function renderChart(data) {
+            const container = document.getElementById('event-chart');
+            const maxVal = Math.max(...data.map(d => d.event_count || 0));
+            
+            if (data.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#aaa; width:100%;">No data available</p>';
+                return;
+            }
+            
+            container.innerHTML = data.map(d => {
+                const height = maxVal > 0 ? ((d.event_count || 0) / maxVal * 100) : 0;
+                const date = new Date(d.date).toLocaleDateString('vi-VN');
+                return `
+                    <div class="bar" style="height: ${Math.max(height, 2)}%">
+                        <div class="tooltip">
+                            <strong>${date}</strong><br>
+                            Events: ${(d.event_count || 0).toLocaleString()}<br>
+                            Users: ${(d.unique_users || 0).toLocaleString()}<br>
+                            MA7: ${(d.ma_7day_events || 0).toFixed(0)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function renderTable(data) {
+            const tbody = document.getElementById('trends-table');
+            tbody.innerHTML = data.slice(0, 30).map(d => {
+                const growth = d.day_over_day_growth || 0;
+                const growthClass = growth >= 0 ? 'positive' : 'negative';
+                const growthIcon = growth >= 0 ? '↑' : '↓';
+                
+                return `
+                    <tr>
+                        <td>${new Date(d.date).toLocaleDateString('vi-VN')}</td>
+                        <td>${d.event_type || '-'}</td>
+                        <td>${(d.event_count || 0).toLocaleString()}</td>
+                        <td>${(d.unique_users || 0).toLocaleString()}</td>
+                        <td>${(d.ma_7day_events || 0).toFixed(0)}</td>
+                        <td class="${growthClass}">${growthIcon} ${Math.abs(growth).toFixed(1)}%</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>

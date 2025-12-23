@@ -1,0 +1,314 @@
+/* ==== RESET ==== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ==== BODY ==== */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+}
+
+/* ==== HEADER (Modern Shopee Style) ==== */
+.main-header {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    color: white;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Top bar */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    background: rgba(58, 62, 157, 0.95);
+    padding: 10px 30px;
+    font-size: 0.85em;
+    backdrop-filter: blur(10px);
+}
+
+.top-bar a {
+    color: white;
+    text-decoration: none;
+    margin-right: 20px;
+    transition: all 0.3s ease;
+}
+
+.top-bar a:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
+}
+
+/* Main bar */
+.main-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    padding: 15px 30px;
+}
+
+.logo {
+    font-size: 1.9em;
+    font-weight: bold;
+    color: white;
+    text-decoration: none;
+}
+
+.logo a {
+    color: white;
+    text-decoration: none;
+}
+
+.search-bar {
+    flex-grow: 1;
+    margin: 0 30px;
+    display: flex;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 50px;
+    overflow: hidden;
+}
+
+.search-bar input {
+    flex: 1;
+    padding: 10px 20px;
+    border: none;
+    font-size: 1em;
+    background: white;
+}
+
+.search-bar input::placeholder {
+    color: #999;
+}
+
+.search-bar button {
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.search-bar button:hover {
+    transform: scale(1.05);
+}
+
+/* Cart icon */
+.cart-icon {
+    font-size: 1.3em;
+    cursor: pointer;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.cart-icon:hover {
+    transform: scale(1.15);
+}
+
+/* Quick nav links */
+.quick-links {
+    display: flex;
+    gap: 20px;
+    padding: 12px 30px;
+    background: rgba(94, 101, 211, 0.9);
+    font-size: 0.95em;
+    flex-wrap: wrap;
+    backdrop-filter: blur(10px);
+}
+
+.quick-links a {
+    color: white;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    padding: 5px 10px;
+    border-radius: 20px;
+}
+
+.quick-links a:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+/* ==== CONTENT ==== */
+.container {
+    max-width: 1200px;
+    margin: 30px auto;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    padding: 40px;
+}
+
+.container header h1 {
+    font-size: 2.2em;
+    margin-bottom: 10px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: bold;
+}
+
+.container header p {
+    font-size: 1.1em;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+h2 {
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 1.5em;
+    border-bottom: 3px solid #667eea;
+    padding-bottom: 10px;
+}
+
+/* ==== PRODUCT GRID ==== */
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 25px;
+}
+
+.product-card {
+    height: 340px;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.product-card:hover {
+    transform: translateY(-8px);
+    border-color: #667eea;
+    box-shadow: 0 15px 40px rgba(102, 126, 234, 0.25);
+    cursor: pointer;
+}
+
+.product-card.selected {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: transparent;
+}
+
+.product-card img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.product-name {
+    min-height: 40px;
+    margin: 12px 12px 6px 12px;
+    font-size: 0.95em;
+    font-weight: bold;
+    color: #333;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.product-card.selected .product-name {
+    color: white;
+}
+
+.product-price {
+    color: #e74c3c;
+    font-size: 1.4em;
+    font-weight: bold;
+    margin: 0 12px 12px 12px;
+    margin-top: auto;  /* Đẩy xuống dưới cùng */
+}
+
+.product-card.selected .product-price {
+    color: #ffd700;
+}
+
+.loading-spinner {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    font-size: 1.2em;
+}
+
+/* ==== PAGINATION ==== */
+.pagination-controls {
+    margin-top: 30px;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.pagination-controls button {
+    margin: 5px;
+    padding: 10px 15px;
+    border: 2px solid #ddd;
+    background: white;
+    cursor: pointer;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.pagination-controls button:hover {
+    border-color: #667eea;
+    color: #667eea;
+    transform: scale(1.1);
+}
+
+.pagination-controls button.active {
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: transparent;
+}
+
+.pagination-controls .ellipsis {
+    padding: 10px 5px;
+    color: #999;
+    font-weight: bold;
+}
+
+/* ==== FOOTER ==== */
+.footer {
+    text-align: center;
+    padding: 20px;
+    color: white;
+    margin-top: 30px;
+    font-size: 0.95em;
+}
+
+/* ==== RESPONSIVE ==== */
+@media (max-width: 768px) {
+    .container {
+        margin: 20px;
+        padding: 20px;
+    }
+
+    .product-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+    }
+
+    .main-bar {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .search-bar {
+        margin: 10px 0;
+        width: 100%;
+    }
+
+    .container header h1 {
+        font-size: 1.5em;
+    }
+}
