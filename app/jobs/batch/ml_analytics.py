@@ -123,7 +123,7 @@ def feature_engineering(df_events):
     print("Feature Engineering for Machine Learning")
     print("="*80)
     
-    # === USER-LEVEL FEATURES ===
+    # USER-LEVEL FEATURES 
     print("\nComputing user-level features...")
     
     df_user_features = df_events \
@@ -414,7 +414,7 @@ def time_series_analysis(df_events, spark):
                         ((col("event_count") - col("prev_day_events")) / col("prev_day_events") * 100))
                    .otherwise(0))
     
-    print(f"✓ Computed time series metrics for {df_time_series.select('date').distinct().count()} days")
+    print(f" Computed time series metrics for {df_time_series.select('date').distinct().count()} days")
     
     return df_time_series
 
@@ -496,9 +496,9 @@ def save_results(spark, **dataframes):
                 .option("database", MONGO_DB_NAME) \
                 .option("collection", collection) \
                 .save()
-            print(f"✓ Saved {name} to {collection}")
+            print(f" Saved {name} to {collection}")
         except Exception as e:
-            print(f"✗ Error saving {name}: {e}")
+            print(f" Error saving {name}: {e}")
 
 
 def main():
@@ -508,7 +508,7 @@ def main():
     
     # Initialize Spark
     spark = create_spark_session()
-    print("✓ Spark Session initialized with ML support\n")
+    print(" Spark Session initialized with ML support\n")
     
     # Load data
     df_events, df_sessions = load_and_optimize_data(spark)
@@ -552,7 +552,7 @@ def main():
     print(f"  - {MONGO_COLLECTION_STATISTICS}")
     
     spark.stop()
-    print("\n✓ Spark session closed")
+    print("\n Spark session closed")
 
 
 if __name__ == "__main__":

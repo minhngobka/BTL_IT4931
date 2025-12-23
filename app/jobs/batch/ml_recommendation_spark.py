@@ -61,10 +61,10 @@ def train_model():
     spark.sparkContext.setLogLevel("ERROR")
 
     try:
-        print("📖 Loading data from HDFS (TINY sample)...")
+        print(" Loading data from HDFS (TINY sample)...")
         df = spark.read.csv(CSV_PATH, header=True, inferSchema=False).limit(LIMIT_ROWS)
 
-        print("\n🔧 Preparing features...")
+        print("\n Preparing features...")
         df = (
             df.select(
                 F.col("brand").cast("string").alias("brand"),
@@ -75,20 +75,20 @@ def train_model():
             .dropna(subset=["brand", "category_code", "price", "is_purchase"])
             .cache()
         )
-        print(f"✅ Clean rows: {df.count()}")
+        print(f" Clean rows: {df.count()}")
 
-        # ===== Phương án B: Top-K + OTHER =====
-        print(f"\n📌 Bucketing rare values -> OTHER (Top {TOP_BRANDS} brands, Top {TOP_CATEGORIES} categories)")
+        # Phương án B: Top-K + OTHER 
+        print(f"\n Bucketing rare values -> OTHER (Top {TOP_BRANDS} brands, Top {TOP_CATEGORIES} categories)")
         df = keep_topk_and_bucket_other(df, "brand", TOP_BRANDS, OTHER_BRAND)
         df = keep_topk_and_bucket_other(df, "category_code", TOP_CATEGORIES, OTHER_CAT).cache()
 
         # Optional check
         b_cnt = df.select("brand").distinct().count()
         c_cnt = df.select("category_code").distinct().count()
-        print(f"✅ Distinct after bucket: brand={b_cnt}, category_code={c_cnt}")
+        print(f" Distinct after bucket: brand={b_cnt}, category_code={c_cnt}")
 
-        # ===== Pipeline: StringIndexer -> OneHot -> Assemble -> RF =====
-        print("\n🔗 Building Pipeline...")
+        # Pipeline: StringIndexer -> OneHot -> Assemble -> RF 
+        print("\n Building Pipeline...")
 
         brand_indexer = StringIndexer(
             inputCol="brand",
@@ -124,25 +124,25 @@ def train_model():
         pipeline = Pipeline(stages=[brand_indexer, cat_indexer, encoder, assembler, rf])
 
         train_data, test_data = df.randomSplit([0.8, 0.2], seed=SEED)
-        print(f"📊 Train/Test: {train_data.count()} / {test_data.count()}")
+        print(f" Train/Test: {train_data.count()} / {test_data.count()}")
 
-        print("\n🤖 Training...")
+        print("\n Training...")
         pipeline_model = pipeline.fit(train_data)
-        print("✅ Model trained!")
+        print(" Model trained!")
 
         preds = pipeline_model.transform(test_data)
         auc = BinaryClassificationEvaluator(labelCol="is_purchase").evaluate(preds)
-        print(f"✅ AUC: {auc:.4f}")
+        print(f" AUC: {auc:.4f}")
 
-        print("\n💾 Saving PipelineModel...")
+        print("\n Saving PipelineModel...")
         pipeline_model.write().overwrite().save(MODEL_PATH_LOCAL)
-        print(f"✅ Saved to {MODEL_PATH_LOCAL}")
+        print(f" Saved to {MODEL_PATH_LOCAL}")
 
         spark.stop()
         return True
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f" Error: {e}")
         import traceback
         traceback.print_exc()
         try:

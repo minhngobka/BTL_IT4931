@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>⚠️ Churn Prediction</title>
+    <title> Churn Prediction</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -46,7 +46,7 @@
 </head>
 <body>
     <nav class="navbar">
-        <strong>📊 Analyst Dashboard</strong>
+        <strong>Analyst Dashboard</strong>
         <a href="/">Overview</a>
         <a href="/funnel">Funnel</a>
         <a href="/segments">Segments</a>
@@ -55,7 +55,7 @@
     </nav>
 
     <div class="container">
-        <h1 style="margin-bottom: 30px;">⚠️ Churn Risk Analysis</h1>
+        <h1 style="margin-bottom: 30px;">Churn Risk Analysis</h1>
         
         <div class="stats-row">
             <div class="stat-card">
@@ -72,7 +72,7 @@
             </div>
         </div>
         
-        <h2 style="margin: 30px 0 20px;">🚨 High-Value Users at Risk</h2>
+        <h2 style="margin: 30px 0 20px;">High-Value Users at Risk</h2>
         <p style="color: #aaa; margin-bottom: 15px;">Users with high spending but predicted to churn - Priority for retention!</p>
         
         <table>
@@ -111,7 +111,7 @@
                                 <td>${u.purchase_count || 0}</td>
                                 <td>${u.recency_days || 0} days</td>
                                 <td>${((u.overall_conversion_rate || 0) * 100).toFixed(1)}%</td>
-                                <td class="risk-high">⚠️ HIGH</td>
+                                <td class="risk-high">HIGH</td>
                             </tr>
                         `;
                     });

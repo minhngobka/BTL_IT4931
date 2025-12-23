@@ -171,7 +171,7 @@ def main():
 
     # Save to HDFS (luôn lưu để debug)
     recs.write.mode("overwrite").parquet(OUT_RECS_HDFS)
-    print("✅ Saved HDFS recommendations:", OUT_RECS_HDFS)
+    print("Saved HDFS recommendations:", OUT_RECS_HDFS)
 
     # Write to MongoDB (không cần connector)
     # toJSON -> foreachPartition -> bulk upsert
@@ -179,7 +179,7 @@ def main():
         .toJSON() \
         .foreachPartition(mongo_upsert_partition)
 
-    print(f"✅ Upserted to MongoDB: {MONGO_DB}.{MONGO_COLL}")
+    print(f"Upserted to MongoDB: {MONGO_DB}.{MONGO_COLL}")
 
     spark.stop()
 

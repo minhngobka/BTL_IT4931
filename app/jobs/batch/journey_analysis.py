@@ -11,17 +11,17 @@ from datetime import datetime
 env_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config', '.env')
 load_dotenv(dotenv_path=env_path)
 
-# --- Cấu hình ---
+# Cấu hình
 
 # 1. Thông tin MongoDB (Đọc từ collection của app streaming)
 MONGO_URI_READ = os.getenv('MONGODB_URI', 'mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/')
 MONGO_DB_NAME_READ = os.getenv('MONGODB_DATABASE', 'bigdata_db')
-MONGO_COLLECTION_READ = "customer_events" # <-- Collection mà streaming_app.py ghi vào
+MONGO_COLLECTION_READ = "customer_events" # Collection mà streaming_app.py ghi vào
 
 # 2. Thông tin MongoDB (Ghi ra collection kết quả)
 MONGO_URI_WRITE = os.getenv('MONGODB_URI', 'mongodb://my-mongo-mongodb.default.svc.cluster.local:27017/')
 MONGO_DB_NAME_WRITE = os.getenv('MONGODB_DATABASE', 'bigdata_db')
-MONGO_COLLECTION_WRITE = "journey_metrics" # <-- Collection mới cho kết quả
+MONGO_COLLECTION_WRITE = "journey_metrics" # Collection mới cho kết quả
 
 def main():
     print("Khởi tạo Spark Session cho Job Phân tích Hành trình (Batch)...")
@@ -40,7 +40,7 @@ def main():
     spark.sparkContext.setLogLevel("WARN")
     print("Spark Session đã sẵn sàng. Đang đọc dữ liệu từ MongoDB...")
 
-    # --- BƯỚC 1: ĐỌC DỮ LIỆU TỪ MONGODB ---
+    # BƯỚC 1: ĐỌC DỮ LIỆU TỪ MONGODB 
     # Đọc toàn bộ collection 'customer_events'
     df_events = spark.read \
         .format("mongodb") \
@@ -55,7 +55,6 @@ def main():
 
     print(f"Đã đọc xong. Bắt đầu phân tích {df_events.count()} sự kiện...")
 
-    ########
     #Some modification 
     # Thêm cột ngày từ timestamp để partition theo ngày
     df_events_with_date = df_events.withColumn("event_date", to_date(col("event_timestamp")))
@@ -79,9 +78,7 @@ def main():
         .mode("overwrite") \
         .saveAsTable("customer_events_bucketed")
 
-
-    #####
-    # --- BƯỚC 2: ÁP DỤNG WINDOW FUNCTION ĐỂ PHÂN TÍCH PHIÊN ---
+    # BƯỚC 2: ÁP DỤNG WINDOW FUNCTION ĐỂ PHÂN TÍCH PHIÊN 
     # Đây là yêu cầu "Window functions" của đề bài
     
     # Định nghĩa 1 Window: Phân nhóm theo user_session, sắp xếp theo thời gian
@@ -97,7 +94,7 @@ def main():
         .withColumn("has_cart", max(when(col("event_type") == "cart", True)).over(window_session_unbounded)) \
         .withColumn("has_purchase", max(when(col("event_type") == "purchase", True)).over(window_session_unbounded))
 
-    # --- BƯỚC 3: LẤY KẾT QUẢ DUY NHẤT CHO MỖI PHIÊN ---
+    # BƯỚC 3: LẤY KẾT QUẢ DUY NHẤT CHO MỖI PHIÊN 
     # Vì tất cả các hàng trong cùng một session giờ đã có state giống nhau,
     # chúng ta chỉ cần lấy 1 hàng duy nhất (distinct) cho mỗi session
     df_session_summary = df_session_state \
@@ -111,7 +108,7 @@ def main():
     df_session_summary.persist(StorageLevel.MEMORY_ONLY)
     print("Đã phân tích xong trạng thái của từng session.")
 
-    # --- BƯỚC 4: TÍNH TOÁN CÁC CHỈ SỐ CHUYỂN ĐỔI (FUNNEL ANALYSIS) ---
+    # BƯỚC 4: TÍNH TOÁN CÁC CHỈ SỐ CHUYỂN ĐỔI (FUNNEL ANALYSIS) 
     
     # Đếm tổng số session đã được phân tích
     total_sessions = df_session_summary.count()
@@ -141,7 +138,7 @@ def main():
     print(f"Sessions có 'View' VÀ 'Cart': {sessions_view_and_cart}")
     print(f"Sessions có 'View', 'Cart' VÀ 'Purchase': {sessions_view_cart_and_purchase}")
 
-    # --- BƯỚC 5: TÍNH TOÁN TỶ LỆ CHUYỂN ĐỔI VÀ DROP-OFF ---
+    #  BƯỚC 5: TÍNH TOÁN TỶ LỆ CHUYỂN ĐỔI VÀ DROP-OFF 
     
     # Tỷ lệ (View -> Cart): % người xem có thêm vào giỏ
     rate_view_to_cart = (sessions_view_and_cart / sessions_with_view) * 100 if sessions_with_view > 0 else 0.0
@@ -161,7 +158,7 @@ def main():
     print(f"Tỷ lệ chuyển đổi (Cart -> Purchase): {rate_cart_to_purchase:.2f}%")
     print(f"Tỷ lệ rời bỏ tại 'Cart' (không mua): {dropoff_at_cart:.2f}%")
 
-    # --- BƯỚC 6: LƯU KẾT QUẢ VÀO COLLECTION MONGODB MỚI ---
+    # BƯỚC 6: LƯU KẾT QUẢ VÀO COLLECTION MONGODB MỚI 
     
     analysis_time = datetime.now()
 

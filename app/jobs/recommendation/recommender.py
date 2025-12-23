@@ -22,9 +22,9 @@ class ProductRecommender:
         print("Loading products...")
         try:
             self.all_products = list(self.db.product_catalog.find())
-            print(f"✅ Loaded {len(self.all_products)} products")
+            print(f"Loaded {len(self.all_products)} products")
         except Exception as e:
-            print(f"⚠️ Could not load products: {e}")
+            print(f"Could not load products: {e}")
             self.all_products = []
     
     def get_recommendations(self, product_id, top_n=5):

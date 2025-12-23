@@ -15,7 +15,7 @@ OUT_PRODUCT_FEATS = os.getenv("OUT_PRODUCT_FEATS", "hdfs:///data/outputs/product
 # Tuning
 TOPK_PER_ITEM = int(os.getenv("TOPK_PER_ITEM", "100"))
 
-# Chống OOM (quan trọng)
+# Chống OOM 
 MAX_EVENTS_PER_SESSION = int(os.getenv("MAX_EVENTS_PER_SESSION", "25"))  # lấy 25 event gần nhất trong session
 MAX_ITEMS_PER_SESSION = int(os.getenv("MAX_ITEMS_PER_SESSION", "60"))    # bỏ session quá dài
 
@@ -75,7 +75,7 @@ def main():
           .drop("rn")
     )
 
-    # ----------- product features từ events (cho rerank) -----------
+    # product features từ events (cho rerank) 
     # Lấy 1 dòng / product_id (đủ brand/category_code/price)
     feats = (
         df.select("product_id", "brand", "category_code", "price")
@@ -84,13 +84,13 @@ def main():
     )
     feats.write.mode("overwrite").parquet(OUT_PRODUCT_FEATS)
 
-    # ----------- collapse per (session, product) để giảm trùng -----------
+    # collapse per (session, product) để giảm trùng 
     sess_items = (
         df.groupBy("user_session", "product_id")
           .agg(F.max("w").alias("w_item"))
     )
 
-    # ----------- CHỐNG OOM: bỏ session có quá nhiều items -----------
+    #  CHỐNG OOM: bỏ session có quá nhiều items 
     sess_size = sess_items.groupBy("user_session").agg(F.count("*").alias("n_items"))
     sess_items = (
         sess_items.join(sess_size, "user_session")
@@ -101,7 +101,7 @@ def main():
     # Persist để không tính lại nhiều lần
     sess_items = sess_items.persist(StorageLevel.MEMORY_AND_DISK)
 
-    # ----------- self-join trong session để tạo pair (A,B) -----------
+    # self-join trong session để tạo pair (A,B) 
     a = sess_items.alias("a")
     b = sess_items.alias("b")
 
@@ -143,8 +143,8 @@ def main():
 
     topk.write.mode("overwrite").parquet(OUT_CANDIDATES)
 
-    print("✅ Saved product feats:", OUT_PRODUCT_FEATS)
-    print("✅ Saved candidates:", OUT_CANDIDATES)
+    print("Saved product feats:", OUT_PRODUCT_FEATS)
+    print("Saved candidates:", OUT_CANDIDATES)
 
     spark.stop()
 

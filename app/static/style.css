@@ -1,18 +1,18 @@
-/* ==== RESET ==== */
+/* RESET */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-/* ==== BODY ==== */
+/* BODY */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
 }
 
-/* ==== HEADER (Modern Shopee Style) ==== */
+/* HEADER (Modern Shopee Style) */
 .main-header {
     font-family: 'Segoe UI', Tahoma, sans-serif;
     color: white;
@@ -133,7 +133,7 @@ body {
     transform: translateY(-2px);
 }
 
-/* ==== CONTENT ==== */
+/* CONTENT */
 .container {
     max-width: 1200px;
     margin: 30px auto;
@@ -167,7 +167,7 @@ h2 {
     padding-bottom: 10px;
 }
 
-/* ==== PRODUCT GRID ==== */
+/* PRODUCT GRID */
 .product-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -238,7 +238,7 @@ h2 {
     font-size: 1.2em;
 }
 
-/* ==== PAGINATION ==== */
+/* PAGINATION */
 .pagination-controls {
     margin-top: 30px;
     text-align: center;
@@ -277,7 +277,7 @@ h2 {
     font-weight: bold;
 }
 
-/* ==== FOOTER ==== */
+/* FOOTER */
 .footer {
     text-align: center;
     padding: 20px;
@@ -286,7 +286,7 @@ h2 {
     font-size: 0.95em;
 }
 
-/* ==== RESPONSIVE ==== */
+/* RESPONSIVE */
 @media (max-width: 768px) {
     .container {
         margin: 20px;
