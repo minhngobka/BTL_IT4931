@@ -2,13 +2,13 @@
 
 # Quick script to view metrics without Grafana
 
-echo "📊 User Behavior Classification Metrics"
+echo "User Behavior Classification Metrics"
 echo "========================================"
 echo ""
 
 # Check if MongoDB pod is running
 if ! kubectl get pod -l app.kubernetes.io/name=mongodb &>/dev/null; then
-    echo "❌ MongoDB pod not found"
+    echo "MongoDB pod not found"
     exit 1
 fi
 
@@ -21,7 +21,7 @@ echo ""
 # Execute queries
 kubectl exec -it "$MONGO_POD" -- mongosh bigdata --quiet --eval '
 // Segment Distribution
-print("🎯 Segment Distribution:");
+print("Segment Distribution:");
 print("========================");
 db.user_behavior_segments.aggregate([
   {$group: {
@@ -37,7 +37,7 @@ db.user_behavior_segments.aggregate([
   print("");
 });
 
-print("\n💰 Revenue by Segment:");
+print("\nRevenue by Segment:");
 print("======================");
 db.user_behavior_segments.aggregate([
   {$addFields: {
@@ -63,7 +63,7 @@ db.user_behavior_segments.aggregate([
   print("");
 });
 
-print("\n📈 Conversion Funnel:");
+print("\nConversion Funnel:");
 print("====================");
 db.conversion_funnel.find().forEach(doc => {
   print(`${doc.behavior_segment.padEnd(20)}`);
@@ -73,7 +73,7 @@ db.conversion_funnel.find().forEach(doc => {
   print("");
 });
 
-print("\n⏱️  Recent Sessions (Last 10):");
+print("\nRecent Sessions (Last 10):");
 print("==============================");
 db.user_behavior_segments.find()
   .sort({timestamp: -1})
@@ -85,7 +85,7 @@ db.user_behavior_segments.find()
     print("");
   });
 
-print("\n📊 Summary Statistics:");
+print("\nSummary Statistics:");
 print("======================");
 const stats = db.user_behavior_segments.aggregate([
   {$facet: {
@@ -99,13 +99,13 @@ print(`Total Sessions Classified: ${stats.total[0].count}`);
 print(`Average Segment Score: ${stats.avgScore[0].avg.toFixed(2)}`);
 print("");
 
-print("✅ Metrics retrieved successfully!");
+print("\u2705 Metrics retrieved successfully!");
 '
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "💡 For real-time visualization, use:"
+echo "For real-time visualization, use:"
 echo "   bash deploy/scripts/setup_monitoring.sh"
 echo ""
 echo "   Then visit http://localhost:3000 (Grafana)"

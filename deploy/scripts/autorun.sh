@@ -28,9 +28,9 @@ wait_for_user() {
 # Function to check command success
 check_success() {
     if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✓ Success${NC}"
+        echo -e "${GREEN}Success${NC}"
     else
-        echo -e "${RED}✗ Failed - Check error above${NC}"
+        echo -e "${RED}Failed - Check error above${NC}"
         exit 1
     fi
 }
@@ -42,17 +42,17 @@ echo ""
 
 # Check Python
 if command -v python3 &> /dev/null; then
-    echo -e "${GREEN}✓${NC} Python3 is installed"
+    echo -e "${GREEN}Python3 is installed${NC}"
     python3 --version
 else
-    echo -e "${RED}✗${NC} Python3 is NOT installed"
+    echo -e "${RED}Python3 is NOT installed${NC}"
     echo "Install with: sudo apt install python3 python3-pip python3-venv"
     exit 1
 fi
 
 # Check if in correct directory (look for key files in BTL_IT4931)
 if [ ! -f "requirements.txt" ] || [ ! -d "app" ]; then
-    echo -e "${RED}✗${NC} Not in correct directory!"
+    echo -e "${RED}Not in correct directory!${NC}"
     echo "Please run this script from the project root (BTL_IT4931)"
     echo "Current directory: $(pwd)"
     exit 1
@@ -73,7 +73,7 @@ if [ ! -d "venv" ]; then
     python3 -m venv venv
     check_success
 else
-    echo -e "${GREEN}✓${NC} Virtual environment already exists"
+    echo -e "${GREEN}Virtual environment already exists${NC}"
 fi
 
 echo ""
@@ -88,7 +88,7 @@ pip install -r requirements.txt
 check_success
 
 echo ""
-echo -e "${GREEN}✓ Python environment ready!${NC}"
+echo -e "${GREEN}Python environment ready!${NC}"
 wait_for_user
 
 echo -e "${BLUE}=== PHASE 2: Data Preparation ===${NC}"
@@ -96,7 +96,7 @@ echo ""
 
 # Check for dataset
 if [ ! -f "data/raw/ecommerce_events_2019_oct.csv" ]; then
-    echo -e "${YELLOW}⚠${NC} Main dataset 'ecommerce_events_2019_oct.csv' not found!"
+    echo -e "${YELLOW}Main dataset 'ecommerce_events_2019_oct.csv' not found!${NC}"
     echo ""
     echo "Please download '2019-Oct.csv' from:"
     echo "https://www.kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store"
@@ -106,12 +106,12 @@ if [ ! -f "data/raw/ecommerce_events_2019_oct.csv" ]; then
     wait_for_user
     
     if [ ! -f "data/raw/ecommerce_events_2019_oct.csv" ]; then
-        echo -e "${RED}✗${NC} Dataset still not found. Cannot continue."
+        echo -e "${RED}Dataset still not found. Cannot continue.${NC}"
         exit 1
     fi
 fi
 
-echo -e "${GREEN}✓${NC} Main dataset found"
+echo -e "${GREEN}Main dataset found${NC}"
 echo ""
 
 # Generate dimension tables if they don't exist
@@ -126,11 +126,11 @@ if [ ! -f "data/catalog/product_catalog.csv" ]; then
     python -m app.utils.dimension_generator
     check_success
 else
-    echo -e "${GREEN}✓${NC} Dimension tables already exist"
+    echo -e "${GREEN}Dimension tables already exist${NC}"
 fi
 
 echo ""
-echo -e "${GREEN}✓ Dimension tables generated!${NC}"
+echo -e "${GREEN}Dimension tables generated!${NC}"
 ls -lh data/catalog/*.csv
 wait_for_user
 
@@ -141,7 +141,7 @@ echo ""
 
 # Check Minikube
 if ! command -v minikube &> /dev/null; then
-    echo -e "${RED}✗${NC} Minikube is not installed"
+    echo -e "${RED}Minikube is not installed${NC}"
     echo ""
     echo "Install Minikube:"
     echo "  curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64"
@@ -149,33 +149,33 @@ if ! command -v minikube &> /dev/null; then
     exit 1
 fi
 
-echo -e "${GREEN}✓${NC} Minikube is installed"
+echo -e "${GREEN}Minikube is installed${NC}"
 
 # Check kubectl
 if ! command -v kubectl &> /dev/null; then
-    echo -e "${RED}✗${NC} kubectl is not installed"
+    echo -e "${RED}kubectl is not installed${NC}"
     echo ""
     echo "Install kubectl:"
     echo "  sudo snap install kubectl --classic"
     exit 1
 fi
 
-echo -e "${GREEN}✓${NC} kubectl is installed"
+echo -e "${GREEN}kubectl is installed${NC}"
 
 # Check Helm
 if ! command -v helm &> /dev/null; then
-    echo -e "${RED}✗${NC} Helm is not installed"
+    echo -e "${RED}Helm is not installed${NC}"
     echo ""
     echo "Install Helm:"
     echo "  sudo snap install helm --classic"
     exit 1
 fi
 
-echo -e "${GREEN}✓${NC} Helm is installed"
+echo -e "${GREEN}Helm is installed${NC}"
 
 # Check Docker
 if ! command -v docker &> /dev/null; then
-    echo -e "${RED}✗${NC} Docker is not installed"
+    echo -e "${RED}Docker is not installed${NC}"
     echo ""
     echo "Install Docker:"
     echo "  sudo apt install docker.io"
@@ -184,10 +184,10 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-echo -e "${GREEN}✓${NC} Docker is installed"
+echo -e "${GREEN}Docker is installed${NC}"
 
 echo ""
-echo -e "${GREEN}✓ All Kubernetes tools are ready!${NC}"
+echo -e "${GREEN}All Kubernetes tools are ready!${NC}"
 wait_for_user
 
 echo -e "${BLUE}=== PHASE 4: Start Minikube ===${NC}"
@@ -204,7 +204,7 @@ if [ "$MINIKUBE_STATUS" != "Running" ]; then
     minikube start --driver=docker --cpus=4 --memory=8g --disk-size=20g
     check_success
 else
-    echo -e "${GREEN}✓${NC} Minikube is already running"
+    echo -e "${GREEN}Minikube is already running${NC}"
 fi
 
 echo ""
@@ -216,7 +216,7 @@ MINIKUBE_IP=$(minikube ip)
 echo "Minikube IP: ${GREEN}$MINIKUBE_IP${NC}"
 
 echo ""
-echo -e "${GREEN}✓ Minikube is ready!${NC}"
+echo -e "${GREEN}Minikube is ready!${NC}"
 wait_for_user
 
 echo -e "${BLUE}=== PHASE 5: Deploy MongoDB ===${NC}"
@@ -230,7 +230,7 @@ check_success
 
 # Check if MongoDB is already installed
 if helm list | grep -q "my-mongo"; then
-    echo -e "${GREEN}✓${NC} MongoDB is already installed"
+    echo -e "${GREEN}MongoDB is already installed${NC}"
 else
     echo ""
     echo "Installing MongoDB (without authentication for development)..."
@@ -248,7 +248,7 @@ echo "MongoDB status:"
 kubectl get pods | grep mongo || true
 
 echo ""
-echo -e "${GREEN}✓ MongoDB is running!${NC}"
+echo -e "${GREEN}MongoDB is running!${NC}"
 wait_for_user
 
 echo -e "${BLUE}=== PHASE 6: Deploy Kafka ===${NC}"
@@ -262,7 +262,7 @@ check_success
 
 # Check if Strimzi is already installed
 if helm list | grep -q "strimzi-operator"; then
-    echo -e "${GREEN}✓${NC} Strimzi operator is already installed"
+    echo -e "${GREEN}Strimzi operator is already installed${NC}"
 else
     echo ""
     echo "Installing Strimzi Kafka Operator..."
@@ -277,7 +277,7 @@ check_success
 
 # Check if Kafka cluster exists
 if kubectl get kafka my-cluster &>/dev/null; then
-    echo -e "${GREEN}✓${NC} Kafka cluster is already deployed"
+    echo -e "${GREEN}Kafka cluster is already deployed${NC}"
 else
     echo ""
     echo "Deploying Kafka cluster..."
@@ -295,7 +295,7 @@ echo "Kafka status:"
 kubectl get pods | grep my-cluster || true
 
 echo ""
-echo -e "${GREEN}✓ Kafka is running!${NC}"
+echo -e "${GREEN}Kafka is running!${NC}"
 wait_for_user
 
 echo -e "${BLUE}=== PHASE 7: Build Docker Image ===${NC}"
@@ -318,7 +318,7 @@ echo "Verifying image..."
 docker images | grep bigdata-spark
 
 echo ""
-echo -e "${GREEN}✓ Docker image built successfully!${NC}"
+echo -e "${GREEN}Docker image built successfully!${NC}"
 wait_for_user
 
 echo -e "${BLUE}=== PHASE 8: Deploy Spark Applications ===${NC}"
@@ -343,7 +343,7 @@ echo "Current pods:"
 kubectl get pods
 
 echo ""
-echo -e "${GREEN}✓ Spark applications deployed!${NC}"
+echo -e "${GREEN}Spark applications deployed!${NC}"
 wait_for_user
 
 
@@ -367,10 +367,10 @@ SPARK_UI_PID=$!
 sleep 3
 
 echo ""
-echo -e "${GREEN}✓ Port-forwards active!${NC}"
+echo -e "${GREEN}Port-forwards active!${NC}"
 echo ""
 echo "Access your Spark UI:"
-echo "  🎯 Spark UI:   http://localhost:4040"
+echo "  Spark UI:   http://localhost:4040"
 echo ""
 echo "Port-forward PID: Spark=$SPARK_UI_PID"
 echo ""
@@ -410,7 +410,7 @@ wait_for_user
 
 # # Check if Prometheus stack is already installed
 # if helm list | grep -q "prometheus"; then
-#     echo -e "${GREEN}✓${NC} Prometheus stack is already installed"
+#     echo -e "${GREEN}Prometheus stack is already installed${NC}"
 # else
 #     echo ""
 #     echo "Installing Prometheus & Grafana stack..."
@@ -425,7 +425,7 @@ wait_for_user
 
 # # Check if MongoDB exporter is already installed
 # if helm list | grep -q "mongo-exporter"; then
-#     echo -e "${GREEN}✓${NC} MongoDB exporter is already installed"
+#     echo -e "${GREEN}MongoDB exporter is already installed${NC}"
 # else
 #     echo ""
 #     echo "Installing MongoDB exporter..."
@@ -453,7 +453,7 @@ wait_for_user
 # echo "Grafana port-forward PID: $GRAFANA_PID"
 
 # echo ""
-# echo -e "${GREEN}✓ Monitoring stack deployed!${NC}"
+# echo -e "${GREEN}Monitoring stack deployed!${NC}"
 # echo "  🔹 Grafana: http://localhost:3000 (admin/$GRAFANA_PASSWORD)"
 # echo "  🔹 Prometheus: Available via Grafana"
 # echo "  🔹 MongoDB Exporter: Collecting metrics"
@@ -480,7 +480,7 @@ METABASE_PID=$!
 echo "Metabase port-forward PID: $METABASE_PID"
 
 echo ""
-echo -e "${GREEN}✓ Metabase deployed!${NC}"
+echo -e "${GREEN}Metabase deployed!${NC}"
 echo "  🔹 Metabase UI: http://localhost:3001"
 echo "  🔹 Connect to MongoDB: mongodb://my-mongo-mongodb.default.svc.cluster.local:27017"
 
@@ -525,33 +525,33 @@ ps aux | grep -E "port-forward.*(3000|3001|4040)" | grep -v grep || echo "  No p
 echo ""
 
 echo ""
-echo -e "${GREEN}✓ Deployment verification complete!${NC}"
+echo -e "${GREEN}Deployment verification complete!${NC}"
 wait_for_user
 
 echo ""
 echo -e "${BLUE}═══════════════════════════════════════════════════════════════════════════"
-echo "  🎉 DEPLOYMENT COMPLETE - USER BEHAVIOR CLASSIFICATION PIPELINE"
+echo "  DEPLOYMENT COMPLETE - USER BEHAVIOR CLASSIFICATION PIPELINE"
 echo -e "═══════════════════════════════════════════════════════════════════════════${NC}"
 echo ""
-echo -e "${GREEN}✅ All components deployed successfully!${NC}"
+echo -e "${GREEN}All components deployed successfully!${NC}"
 echo ""
-echo "📊 ${YELLOW}ACCESS DASHBOARDS:${NC}"
+echo "${YELLOW}ACCESS DASHBOARDS:${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "  📈 ${GREEN}Spark UI:${NC}             http://localhost:4040"
-echo "     → View streaming job status, DAG visualization, metrics"
+echo "  ${GREEN}Spark UI:${NC}             http://localhost:4040"
+echo "     -> View streaming job status, DAG visualization, metrics"
 echo ""
-echo "  📊 ${GREEN}Grafana:${NC}              http://localhost:3000"
-echo "     → Username: admin | Password: $GRAFANA_PASSWORD"
-echo "     → MongoDB metrics, system monitoring, custom dashboards"
+echo "  ${GREEN}Grafana:${NC}              http://localhost:3000"
+echo "     -> Username: admin | Password: $GRAFANA_PASSWORD"
+echo "     -> MongoDB metrics, system monitoring, custom dashboards"
 echo ""
-echo "  💼 ${GREEN}Metabase:${NC}             http://localhost:3001"
-echo "     → Business intelligence and data exploration"
-echo "     → MongoDB: mongodb://my-mongo-mongodb.default.svc.cluster.local:27017"
+echo "  ${GREEN}Metabase:${NC}             http://localhost:3001"
+echo "     Business intelligence and data exploration"
+echo "     MongoDB: mongodb://my-mongo-mongodb.default.svc.cluster.local:27017"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "🚀 ${YELLOW}QUICK START COMMANDS:${NC}"
+echo "${YELLOW}QUICK START COMMANDS:${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "1. ${GREEN}Update Kafka config:${NC}"
@@ -572,29 +572,29 @@ echo "   ${YELLOW}kubectl logs -f deployment/spark-streaming-advanced${NC}"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "📊 ${YELLOW}WHAT'S RUNNING:${NC}"
+echo "${YELLOW}WHAT'S RUNNING:${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "  ✓ Kafka Cluster (events streaming)"
-echo "  ✓ MongoDB (data storage)"
-echo "  ✓ Spark Streaming (behavior classification)"
-echo "  ✓ Prometheus + Grafana (monitoring & visualization)"
-echo "  ✓ MongoDB Exporter (metrics collection)"
-echo "  ✓ Metabase (business intelligence)"
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "🎯 ${YELLOW}USER BEHAVIOR SEGMENTS TRACKED:${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "  🔴 Bouncer:          1-2 events, <1 min sessions"
-echo "  🟡 Browser:          3-10 events, cart but no purchase"
-echo "  🟢 Engaged Shopper:  10-30 events, multiple purchases"
-echo "  🔵 Power User:       30+ events, high engagement"
+echo "  Kafka Cluster (events streaming)"
+echo "  MongoDB (data storage)"
+echo "  Spark Streaming (behavior classification)"
+echo "  Prometheus + Grafana (monitoring & visualization)"
+echo "  MongoDB Exporter (metrics collection)"
+echo "  Metabase (business intelligence)"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "🛠️  ${YELLOW}USEFUL COMMANDS:${NC}"
+echo "${YELLOW}USER BEHAVIOR SEGMENTS TRACKED:${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "  Bouncer:          1-2 events, <1 min sessions"
+echo "  Browser:          3-10 events, cart but no purchase"
+echo "  Engaged Shopper:  10-30 events, multiple purchases"
+echo "  Power User:       30+ events, high engagement"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "${YELLOW}USEFUL COMMANDS:${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "  View all pods:       ${GREEN}kubectl get pods${NC}"
@@ -605,7 +605,7 @@ echo "  Query MongoDB:       ${GREEN}kubectl exec -it <mongo-pod> -- mongosh big
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "🛑 ${YELLOW}TO STOP PORT-FORWARDS:${NC}"
+echo "${YELLOW}TO STOP PORT-FORWARDS:${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "  ${GREEN}pkill -f 'port-forward'${NC}"
@@ -616,5 +616,5 @@ echo "    Metabase:  ${GREEN}kill $METABASE_PID${NC}"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo -e "${GREEN}🚀 Ready to start! Open the monitoring dashboards in your browser.${NC}"
+echo -e "${GREEN}Ready to start! Open the monitoring dashboards in your browser.${NC}"
 echo ""

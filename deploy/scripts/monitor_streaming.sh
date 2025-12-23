@@ -2,7 +2,7 @@
 
 # Real-time monitoring script for Spark Streaming
 
-echo "🎯 User Behavior Classification - Live Monitor"
+echo "User Behavior Classification - Live Monitor"
 echo "=============================================="
 echo ""
 
@@ -17,7 +17,7 @@ NC='\033[0m' # No Color
 SPARK_POD=$(kubectl get pod -l app=spark-streaming-pvc -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
 
 if [ -z "$SPARK_POD" ]; then
-    echo -e "${RED}❌ Spark streaming pod not found${NC}"
+    echo -e "${RED}Spark streaming pod not found${NC}"
     echo "Run: kubectl apply -f deploy/kubernetes/base/spark-deployments.yaml"
     exit 1
 fi
@@ -25,12 +25,12 @@ fi
 # Check pod status
 POD_STATUS=$(kubectl get pod "$SPARK_POD" -o jsonpath='{.status.phase}')
 if [ "$POD_STATUS" != "Running" ]; then
-    echo -e "${YELLOW}⏳ Spark pod status: $POD_STATUS${NC}"
+    echo -e "${YELLOW}Spark pod status: $POD_STATUS${NC}"
     echo "Waiting for pod to be ready..."
     kubectl wait --for=condition=ready pod "$SPARK_POD" --timeout=120s
 fi
 
-echo -e "${GREEN}✅ Spark streaming pod: $SPARK_POD${NC}"
+echo -e "${GREEN}Spark streaming pod: $SPARK_POD${NC}"
 echo ""
 
 # Display menu
@@ -54,14 +54,14 @@ while true; do
     case $choice in
         1)
             echo ""
-            echo -e "${BLUE}📜 Spark Application Logs:${NC}"
+            echo -e "${BLUE}Spark Application Logs:${NC}"
             kubectl logs "$SPARK_POD" --tail=50
             echo ""
             read -p "Press Enter to continue..."
             ;;
         2)
             echo ""
-            echo -e "${BLUE}🔄 Streaming Query Status:${NC}"
+            echo -e "${BLUE}Streaming Query Status:${NC}"
             kubectl exec -it "$SPARK_POD" -- bash -c "
                 echo 'Checking Spark streaming queries...'
                 ps aux | grep spark-submit
@@ -74,7 +74,7 @@ while true; do
             ;;
         3)
             echo ""
-            echo -e "${BLUE}📊 MongoDB Collections:${NC}"
+            echo -e "${BLUE}MongoDB Collections:${NC}"
             MONGO_POD=$(kubectl get pod -l app.kubernetes.io/name=mongodb -o jsonpath='{.items[0].metadata.name}')
             kubectl exec -it "$MONGO_POD" -- mongosh bigdata --quiet --eval '
                 print("Collections in bigdata:");
@@ -88,19 +88,19 @@ while true; do
             ;;
         4)
             echo ""
-            echo -e "${BLUE}🎯 Live Segment Distribution:${NC}"
+            echo -e "${BLUE}Live Segment Distribution:${NC}"
             bash /workspaces/BTL_IT4931/deploy/scripts/view_metrics.sh
             echo ""
             read -p "Press Enter to continue..."
             ;;
         5)
             echo ""
-            echo -e "${YELLOW}🎯 Starting Spark UI port-forward...${NC}"
+            echo -e "${YELLOW}Starting Spark UI port-forward...${NC}"
             pkill -f "port-forward.*spark.*4040" 2>/dev/null || true
             kubectl port-forward "$SPARK_POD" 4040:4040 > /dev/null 2>&1 &
             PF_PID=$!
             sleep 2
-            echo -e "${GREEN}✅ Spark UI available at: http://localhost:4040${NC}"
+            echo -e "${GREEN}Spark UI available at: http://localhost:4040${NC}"
             if [ -n "$BROWSER" ]; then
                 "$BROWSER" http://localhost:4040 &
             fi
@@ -111,12 +111,12 @@ while true; do
             ;;
         6)
             echo ""
-            echo -e "${YELLOW}📈 Starting Grafana port-forward...${NC}"
+            echo -e "${YELLOW}Starting Grafana port-forward...${NC}"
             pkill -f "port-forward.*grafana" 2>/dev/null || true
             kubectl port-forward svc/grafana 3000:3000 > /dev/null 2>&1 &
             GRAFANA_PID=$!
             sleep 2
-            echo -e "${GREEN}✅ Grafana available at: http://localhost:3000${NC}"
+            echo -e "${GREEN}Grafana available at: http://localhost:3000${NC}"
             echo "   Username: admin"
             echo "   Password: admin123"
             if [ -n "$BROWSER" ]; then
@@ -129,7 +129,7 @@ while true; do
             ;;
         7)
             echo ""
-            echo -e "${BLUE}📊 Prometheus Metrics:${NC}"
+            echo -e "${BLUE}Prometheus Metrics:${NC}"
             echo "Fetching metrics from Spark application..."
             kubectl port-forward "$SPARK_POD" 8080:8080 > /dev/null 2>&1 &
             METRICS_PID=$!
@@ -141,13 +141,13 @@ while true; do
             ;;
         8)
             echo ""
-            echo -e "${GREEN}📡 Monitoring all logs (Ctrl+C to stop):${NC}"
+            echo -e "${GREEN}Monitoring all logs (Ctrl+C to stop):${NC}"
             echo ""
             kubectl logs -f "$SPARK_POD"
             ;;
         9)
             echo ""
-            echo -e "${GREEN}👋 Goodbye!${NC}"
+            echo -e "${GREEN}Goodbye!${NC}"
             exit 0
             ;;
         *)
@@ -157,7 +157,7 @@ while true; do
     esac
     
     clear
-    echo "🎯 User Behavior Classification - Live Monitor"
+    echo "User Behavior Classification - Live Monitor"
     echo "=============================================="
     echo ""
 done
